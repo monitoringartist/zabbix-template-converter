@@ -1,0 +1,1097 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<zabbix_export>
+    <version>4.4</version>
+    <date>2015-12-30T14:41:30Z</date>
+    <groups>
+        <group>
+            <name>Templates/Applications</name>
+        </group>
+    </groups>
+    <templates>
+        <template>
+            <name>Template App Apache by HTTP</name>
+            <template>Template App Apache by HTTP</template>
+            <description>Get metrics from mod_status module using HTTP agent.&#xD;&#xA;https://httpd.apache.org/docs/current/mod/mod_status.html&#xD;&#xA;&#xD;&#xA;You can discuss this template or leave feedback on our forum https://www.zabbix.com/forum/zabbix-suggestions-and-feedback/384764-discussion-thread-for-official-zabbix-template-apache&#xD;&#xA;&#xD;&#xA;Template tooling version used: 0.32</description>
+            <groups>
+                <group>
+                    <name>Templates/Applications</name>
+                </group>
+            </groups>
+            <applications>
+                <application>
+                    <name>Apache</name>
+                </application>
+                <application>
+                    <name>Zabbix raw items</name>
+                </application>
+            </applications>
+            <items>
+                <item>
+                    <name>Apache: Total bytes</name>
+                    <type>DEPENDENT</type>
+                    <key>apache.bytes</key>
+                    <history>7d</history>
+                    <value_type>FLOAT</value_type>
+                    <units>B</units>
+                    <description>Total bytes served</description>
+                    <applications>
+                        <application>
+                            <name>Apache</name>
+                        </application>
+                    </applications>
+                    <preprocessing>
+                        <step>
+                            <type>JSONPATH</type>
+                            <params>$[&#34;Total kBytes&#34;]</params>
+                        </step>
+                        <step>
+                            <type>MULTIPLIER</type>
+                            <params>1024</params>
+                        </step>
+                    </preprocessing>
+                    <master_item>
+                        <key>apache.get_status</key>
+                    </master_item>
+                    <triggers></triggers>
+                    <valuemap>
+                        <mappings></mappings>
+                    </valuemap>
+                </item>
+                <item>
+                    <name>Apache: Bytes per second</name>
+                    <type>DEPENDENT</type>
+                    <key>apache.bytes.rate</key>
+                    <history>7d</history>
+                    <value_type>FLOAT</value_type>
+                    <units>Bps</units>
+                    <description>Calculated as change rate for &#39;Total bytes&#39; stat.&#xD;&#xA;BytesPerSec is not used, as it counts average since last Apache server start.</description>
+                    <applications>
+                        <application>
+                            <name>Apache</name>
+                        </application>
+                    </applications>
+                    <preprocessing>
+                        <step>
+                            <type>JSONPATH</type>
+                            <params>$[&#34;Total kBytes&#34;]</params>
+                        </step>
+                        <step>
+                            <type>MULTIPLIER</type>
+                            <params>1024</params>
+                        </step>
+                        <step>
+                            <type>CHANGE_PER_SECOND</type>
+                        </step>
+                    </preprocessing>
+                    <master_item>
+                        <key>apache.get_status</key>
+                    </master_item>
+                    <triggers></triggers>
+                    <valuemap>
+                        <mappings></mappings>
+                    </valuemap>
+                </item>
+                <item>
+                    <name>Apache: Get status</name>
+                    <type>HTTP_AGENT</type>
+                    <key>apache.get_status</key>
+                    <history>1h</history>
+                    <value_type>TEXT</value_type>
+                    <description>Getting data from a machine-readable version of the Apache status page.&#xD;&#xA;https://httpd.apache.org/docs/current/mod/mod_status.html</description>
+                    <applications>
+                        <application>
+                            <name>Zabbix raw items</name>
+                        </application>
+                    </applications>
+                    <preprocessing>
+                        <step>
+                            <type>JAVASCRIPT</type>
+                            <params>// Convert Apache status to JSON&#xA;var lines = value.split(&#34;\n&#34;);&#xA;var fields = {},&#xA;    output = {},&#xA;    workers = {&#xA;        &#34;_&#34;: 0, &#34;S&#34;: 0, &#34;R&#34;: 0,&#xA;        &#34;W&#34;: 0, &#34;K&#34;: 0, &#34;D&#34;: 0,&#xA;        &#34;C&#34;: 0, &#34;L&#34;: 0, &#34;G&#34;: 0,&#xA;        &#34;I&#34;: 0, &#34;.&#34;: 0&#xA;    };&#xA;&#xA;// Get all &#34;Key: Value&#34; pairs as an object&#xA;for (var i = 0; i &lt; lines.length; i++) {&#xA;    var line = lines[i].match(/([A-z0-9 ]+): (.*)/);&#xA;    if (line !== null) {&#xA;        output[line[1]] = isNaN(line[2]) ? line[2] : Number(line[2]);&#xA;    }&#xA;}&#xA;&#xA;// For versions without &#34;ServerUptimeSeconds&#34; metric&#xA;output.ServerUptimeSeconds = output.ServerUptimeSeconds || output.Uptime&#xA; &#xA;// Parse &#34;Scoreboard&#34; to get worker count.&#xA;if (typeof output.Scoreboard === &#39;string&#39;) {&#xA;    for (var i = 0; i &lt; output.Scoreboard.length; i++) {&#xA;        var char = output.Scoreboard[i];&#xA;        workers[char]++;&#xA;    }&#xA;}&#xA; &#xA;// Add worker data to the output&#xA;output.Workers = {&#xA;    waiting: workers[&#34;_&#34;], starting: workers[&#34;S&#34;], reading: workers[&#34;R&#34;],&#xA;    sending: workers[&#34;W&#34;], keepalive: workers[&#34;K&#34;], dnslookup: workers[&#34;D&#34;],&#xA;    closing: workers[&#34;C&#34;], logging: workers[&#34;L&#34;], finishing: workers[&#34;G&#34;],&#xA;    cleanup: workers[&#34;I&#34;], slot: workers[&#34;.&#34;]&#xA;};&#xA; &#xA;// Return JSON string&#xA;return JSON.stringify(output);</params>
+                        </step>
+                    </preprocessing>
+                    <master_item></master_item>
+                    <url>{$APACHE.STATUS.SCHEME}://{HOST.CONN}:{$APACHE.STATUS.PORT}/{$APACHE.STATUS.PATH}</url>
+                    <retrieve_mode>BOTH</retrieve_mode>
+                    <triggers>
+                        <trigger>
+                            <expression>{nodata(30m)}=1</expression>
+                            <name>Apache: Failed to fetch status page (or no data for 30m)</name>
+                            <priority>WARNING</priority>
+                            <description>Zabbix has not received data for items for the last 30 minutes.</description>
+                            <manual_close>YES</manual_close>
+                            <dependencies>
+                                <dependency>
+                                    <name>Apache: Service is down</name>
+                                    <expression>{Template App Apache by HTTP:net.tcp.service[http,&#34;{HOST.CONN}&#34;,&#34;{$APACHE.STATUS.PORT}&#34;].last()}=0</expression>
+                                </dependency>
+                            </dependencies>
+                        </trigger>
+                    </triggers>
+                    <valuemap>
+                        <mappings></mappings>
+                    </valuemap>
+                </item>
+                <item>
+                    <name>Apache: Total requests</name>
+                    <type>DEPENDENT</type>
+                    <key>apache.requests</key>
+                    <history>7d</history>
+                    <description>A total number of accesses</description>
+                    <applications>
+                        <application>
+                            <name>Apache</name>
+                        </application>
+                    </applications>
+                    <preprocessing>
+                        <step>
+                            <type>JSONPATH</type>
+                            <params>$[&#34;Total Accesses&#34;]</params>
+                        </step>
+                    </preprocessing>
+                    <master_item>
+                        <key>apache.get_status</key>
+                    </master_item>
+                    <triggers></triggers>
+                    <valuemap>
+                        <mappings></mappings>
+                    </valuemap>
+                </item>
+                <item>
+                    <name>Apache: Requests per second</name>
+                    <type>DEPENDENT</type>
+                    <key>apache.requests.rate</key>
+                    <history>7d</history>
+                    <value_type>FLOAT</value_type>
+                    <description>Calculated as change rate for &#39;Total requests&#39; stat.&#xD;&#xA;ReqPerSec is not used, as it counts average since last Apache server start.</description>
+                    <applications>
+                        <application>
+                            <name>Apache</name>
+                        </application>
+                    </applications>
+                    <preprocessing>
+                        <step>
+                            <type>JSONPATH</type>
+                            <params>$[&#34;Total Accesses&#34;]</params>
+                        </step>
+                        <step>
+                            <type>CHANGE_PER_SECOND</type>
+                        </step>
+                    </preprocessing>
+                    <master_item>
+                        <key>apache.get_status</key>
+                    </master_item>
+                    <triggers></triggers>
+                    <valuemap>
+                        <mappings></mappings>
+                    </valuemap>
+                </item>
+                <item>
+                    <name>Apache: Uptime</name>
+                    <type>DEPENDENT</type>
+                    <key>apache.uptime</key>
+                    <history>7d</history>
+                    <units>uptime</units>
+                    <description>Service uptime in seconds</description>
+                    <applications>
+                        <application>
+                            <name>Apache</name>
+                        </application>
+                    </applications>
+                    <preprocessing>
+                        <step>
+                            <type>JSONPATH</type>
+                            <params>$.ServerUptimeSeconds</params>
+                        </step>
+                    </preprocessing>
+                    <master_item>
+                        <key>apache.get_status</key>
+                    </master_item>
+                    <triggers>
+                        <trigger>
+                            <expression>{last()}&lt;10m</expression>
+                            <name>Apache: has been restarted (uptime &lt; 10m)</name>
+                            <priority>INFO</priority>
+                            <description>Uptime is less than 10 minutes</description>
+                            <manual_close>YES</manual_close>
+                            <dependencies></dependencies>
+                        </trigger>
+                    </triggers>
+                    <valuemap>
+                        <mappings></mappings>
+                    </valuemap>
+                </item>
+                <item>
+                    <name>Apache: Version</name>
+                    <type>DEPENDENT</type>
+                    <key>apache.version</key>
+                    <history>7d</history>
+                    <value_type>CHAR</value_type>
+                    <description>Service version</description>
+                    <applications>
+                        <application>
+                            <name>Apache</name>
+                        </application>
+                    </applications>
+                    <preprocessing>
+                        <step>
+                            <type>JSONPATH</type>
+                            <params>$.ServerVersion</params>
+                        </step>
+                        <step>
+                            <type>DISCARD_UNCHANGED_HEARTBEAT</type>
+                            <params>1d</params>
+                        </step>
+                    </preprocessing>
+                    <master_item>
+                        <key>apache.get_status</key>
+                    </master_item>
+                    <triggers>
+                        <trigger>
+                            <expression>{diff()}=1 and {strlen()}&gt;0</expression>
+                            <name>Apache: Version has changed (new version: {ITEM.VALUE})</name>
+                            <priority>INFO</priority>
+                            <description>Apache version has changed. Ack to close.</description>
+                            <manual_close>YES</manual_close>
+                            <dependencies></dependencies>
+                            <recovery_mode>NONE</recovery_mode>
+                        </trigger>
+                    </triggers>
+                    <valuemap>
+                        <mappings></mappings>
+                    </valuemap>
+                </item>
+                <item>
+                    <name>Apache: Total workers busy</name>
+                    <type>DEPENDENT</type>
+                    <key>apache.workers_total.busy</key>
+                    <history>7d</history>
+                    <description>Total number of busy worker threads/processes</description>
+                    <applications>
+                        <application>
+                            <name>Apache</name>
+                        </application>
+                    </applications>
+                    <preprocessing>
+                        <step>
+                            <type>JSONPATH</type>
+                            <params>$.BusyWorkers</params>
+                        </step>
+                    </preprocessing>
+                    <master_item>
+                        <key>apache.get_status</key>
+                    </master_item>
+                    <triggers></triggers>
+                    <valuemap>
+                        <mappings></mappings>
+                    </valuemap>
+                </item>
+                <item>
+                    <name>Apache: Total workers idle</name>
+                    <type>DEPENDENT</type>
+                    <key>apache.workers_total.idle</key>
+                    <history>7d</history>
+                    <description>Total number of idle worker threads/processes</description>
+                    <applications>
+                        <application>
+                            <name>Apache</name>
+                        </application>
+                    </applications>
+                    <preprocessing>
+                        <step>
+                            <type>JSONPATH</type>
+                            <params>$.IdleWorkers</params>
+                        </step>
+                    </preprocessing>
+                    <master_item>
+                        <key>apache.get_status</key>
+                    </master_item>
+                    <triggers></triggers>
+                    <valuemap>
+                        <mappings></mappings>
+                    </valuemap>
+                </item>
+                <item>
+                    <name>Apache: Workers idle cleanup</name>
+                    <type>DEPENDENT</type>
+                    <key>apache.workers.cleanup</key>
+                    <history>7d</history>
+                    <description>Number of workers in cleanup state</description>
+                    <applications>
+                        <application>
+                            <name>Apache</name>
+                        </application>
+                    </applications>
+                    <preprocessing>
+                        <step>
+                            <type>JSONPATH</type>
+                            <params>$.Workers.cleanup</params>
+                        </step>
+                    </preprocessing>
+                    <master_item>
+                        <key>apache.get_status</key>
+                    </master_item>
+                    <triggers></triggers>
+                    <valuemap>
+                        <mappings></mappings>
+                    </valuemap>
+                </item>
+                <item>
+                    <name>Apache: Workers closing connection</name>
+                    <type>DEPENDENT</type>
+                    <key>apache.workers.closing</key>
+                    <history>7d</history>
+                    <description>Number of workers in closing state</description>
+                    <applications>
+                        <application>
+                            <name>Apache</name>
+                        </application>
+                    </applications>
+                    <preprocessing>
+                        <step>
+                            <type>JSONPATH</type>
+                            <params>$.Workers.closing</params>
+                        </step>
+                    </preprocessing>
+                    <master_item>
+                        <key>apache.get_status</key>
+                    </master_item>
+                    <triggers></triggers>
+                    <valuemap>
+                        <mappings></mappings>
+                    </valuemap>
+                </item>
+                <item>
+                    <name>Apache: Workers DNS lookup</name>
+                    <type>DEPENDENT</type>
+                    <key>apache.workers.dnslookup</key>
+                    <history>7d</history>
+                    <description>Number of workers in dnslookup state</description>
+                    <applications>
+                        <application>
+                            <name>Apache</name>
+                        </application>
+                    </applications>
+                    <preprocessing>
+                        <step>
+                            <type>JSONPATH</type>
+                            <params>$.Workers.dnslookup</params>
+                        </step>
+                    </preprocessing>
+                    <master_item>
+                        <key>apache.get_status</key>
+                    </master_item>
+                    <triggers></triggers>
+                    <valuemap>
+                        <mappings></mappings>
+                    </valuemap>
+                </item>
+                <item>
+                    <name>Apache: Workers finishing</name>
+                    <type>DEPENDENT</type>
+                    <key>apache.workers.finishing</key>
+                    <history>7d</history>
+                    <description>Number of workers in finishing state</description>
+                    <applications>
+                        <application>
+                            <name>Apache</name>
+                        </application>
+                    </applications>
+                    <preprocessing>
+                        <step>
+                            <type>JSONPATH</type>
+                            <params>$.Workers.finishing</params>
+                        </step>
+                    </preprocessing>
+                    <master_item>
+                        <key>apache.get_status</key>
+                    </master_item>
+                    <triggers></triggers>
+                    <valuemap>
+                        <mappings></mappings>
+                    </valuemap>
+                </item>
+                <item>
+                    <name>Apache: Workers keepalive (read)</name>
+                    <type>DEPENDENT</type>
+                    <key>apache.workers.keepalive</key>
+                    <history>7d</history>
+                    <description>Number of workers in keepalive state</description>
+                    <applications>
+                        <application>
+                            <name>Apache</name>
+                        </application>
+                    </applications>
+                    <preprocessing>
+                        <step>
+                            <type>JSONPATH</type>
+                            <params>$.Workers.keepalive</params>
+                        </step>
+                    </preprocessing>
+                    <master_item>
+                        <key>apache.get_status</key>
+                    </master_item>
+                    <triggers></triggers>
+                    <valuemap>
+                        <mappings></mappings>
+                    </valuemap>
+                </item>
+                <item>
+                    <name>Apache: Workers logging</name>
+                    <type>DEPENDENT</type>
+                    <key>apache.workers.logging</key>
+                    <history>7d</history>
+                    <description>Number of workers in logging state</description>
+                    <applications>
+                        <application>
+                            <name>Apache</name>
+                        </application>
+                    </applications>
+                    <preprocessing>
+                        <step>
+                            <type>JSONPATH</type>
+                            <params>$.Workers.logging</params>
+                        </step>
+                    </preprocessing>
+                    <master_item>
+                        <key>apache.get_status</key>
+                    </master_item>
+                    <triggers></triggers>
+                    <valuemap>
+                        <mappings></mappings>
+                    </valuemap>
+                </item>
+                <item>
+                    <name>Apache: Workers reading request</name>
+                    <type>DEPENDENT</type>
+                    <key>apache.workers.reading</key>
+                    <history>7d</history>
+                    <description>Number of workers in reading state</description>
+                    <applications>
+                        <application>
+                            <name>Apache</name>
+                        </application>
+                    </applications>
+                    <preprocessing>
+                        <step>
+                            <type>JSONPATH</type>
+                            <params>$.Workers.reading</params>
+                        </step>
+                    </preprocessing>
+                    <master_item>
+                        <key>apache.get_status</key>
+                    </master_item>
+                    <triggers></triggers>
+                    <valuemap>
+                        <mappings></mappings>
+                    </valuemap>
+                </item>
+                <item>
+                    <name>Apache: Workers sending reply</name>
+                    <type>DEPENDENT</type>
+                    <key>apache.workers.sending</key>
+                    <history>7d</history>
+                    <description>Number of workers in sending state</description>
+                    <applications>
+                        <application>
+                            <name>Apache</name>
+                        </application>
+                    </applications>
+                    <preprocessing>
+                        <step>
+                            <type>JSONPATH</type>
+                            <params>$.Workers.sending</params>
+                        </step>
+                    </preprocessing>
+                    <master_item>
+                        <key>apache.get_status</key>
+                    </master_item>
+                    <triggers></triggers>
+                    <valuemap>
+                        <mappings></mappings>
+                    </valuemap>
+                </item>
+                <item>
+                    <name>Apache: Workers slot with no current process</name>
+                    <type>DEPENDENT</type>
+                    <key>apache.workers.slot</key>
+                    <history>7d</history>
+                    <description>Number of slots with no current process</description>
+                    <applications>
+                        <application>
+                            <name>Apache</name>
+                        </application>
+                    </applications>
+                    <preprocessing>
+                        <step>
+                            <type>JSONPATH</type>
+                            <params>$.Workers.slot</params>
+                        </step>
+                    </preprocessing>
+                    <master_item>
+                        <key>apache.get_status</key>
+                    </master_item>
+                    <triggers></triggers>
+                    <valuemap>
+                        <mappings></mappings>
+                    </valuemap>
+                </item>
+                <item>
+                    <name>Apache: Workers starting up</name>
+                    <type>DEPENDENT</type>
+                    <key>apache.workers.starting</key>
+                    <history>7d</history>
+                    <description>Number of workers in starting state</description>
+                    <applications>
+                        <application>
+                            <name>Apache</name>
+                        </application>
+                    </applications>
+                    <preprocessing>
+                        <step>
+                            <type>JSONPATH</type>
+                            <params>$.Workers.starting</params>
+                        </step>
+                    </preprocessing>
+                    <master_item>
+                        <key>apache.get_status</key>
+                    </master_item>
+                    <triggers></triggers>
+                    <valuemap>
+                        <mappings></mappings>
+                    </valuemap>
+                </item>
+                <item>
+                    <name>Apache: Workers waiting for connection</name>
+                    <type>DEPENDENT</type>
+                    <key>apache.workers.waiting</key>
+                    <history>7d</history>
+                    <description>Number of workers in waiting state</description>
+                    <applications>
+                        <application>
+                            <name>Apache</name>
+                        </application>
+                    </applications>
+                    <preprocessing>
+                        <step>
+                            <type>JSONPATH</type>
+                            <params>$.Workers.waiting</params>
+                        </step>
+                    </preprocessing>
+                    <master_item>
+                        <key>apache.get_status</key>
+                    </master_item>
+                    <triggers></triggers>
+                    <valuemap>
+                        <mappings></mappings>
+                    </valuemap>
+                </item>
+                <item>
+                    <name>Apache: Service response time</name>
+                    <type>SIMPLE</type>
+                    <key>net.tcp.service.perf[http,&#34;{HOST.CONN}&#34;,&#34;{$APACHE.STATUS.PORT}&#34;]</key>
+                    <history>7d</history>
+                    <value_type>FLOAT</value_type>
+                    <units>s</units>
+                    <applications>
+                        <application>
+                            <name>Apache</name>
+                        </application>
+                    </applications>
+                    <preprocessing></preprocessing>
+                    <master_item></master_item>
+                    <triggers>
+                        <trigger>
+                            <expression>{min(5m)}&gt;{$APACHE.RESPONSE_TIME.MAX.WARN}</expression>
+                            <name>Apache: Service response time is too high (over {$APACHE.RESPONSE_TIME.MAX.WARN}s for 5m)</name>
+                            <priority>WARNING</priority>
+                            <manual_close>YES</manual_close>
+                            <dependencies>
+                                <dependency>
+                                    <name>Apache: Service is down</name>
+                                    <expression>{Template App Apache by HTTP:net.tcp.service[http,&#34;{HOST.CONN}&#34;,&#34;{$APACHE.STATUS.PORT}&#34;].last()}=0</expression>
+                                </dependency>
+                            </dependencies>
+                        </trigger>
+                    </triggers>
+                    <valuemap>
+                        <mappings></mappings>
+                    </valuemap>
+                </item>
+                <item>
+                    <name>Apache: Service ping</name>
+                    <type>SIMPLE</type>
+                    <key>net.tcp.service[http,&#34;{HOST.CONN}&#34;,&#34;{$APACHE.STATUS.PORT}&#34;]</key>
+                    <history>7d</history>
+                    <applications>
+                        <application>
+                            <name>Apache</name>
+                        </application>
+                    </applications>
+                    <preprocessing>
+                        <step>
+                            <type>DISCARD_UNCHANGED_HEARTBEAT</type>
+                            <params>10m</params>
+                        </step>
+                    </preprocessing>
+                    <master_item></master_item>
+                    <triggers>
+                        <trigger>
+                            <expression>{last()}=0</expression>
+                            <name>Apache: Service is down</name>
+                            <priority>AVERAGE</priority>
+                            <manual_close>YES</manual_close>
+                            <dependencies></dependencies>
+                        </trigger>
+                    </triggers>
+                    <valuemap>
+                        <name>Service state</name>
+                        <mappings></mappings>
+                    </valuemap>
+                </item>
+            </items>
+            <discovery_rules>
+                <discovery_rule>
+                    <name>Event MPM discovery</name>
+                    <type>DEPENDENT</type>
+                    <key>apache.mpm.event.discovery</key>
+                    <description>Additional metrics if event MPM is used&#xD;&#xA;https://httpd.apache.org/docs/current/mod/event.html</description>
+                    <item_prototypes>
+                        <item_prototype>
+                            <name>Apache: Bytes per request</name>
+                            <type>DEPENDENT</type>
+                            <key>apache.bytes[per_request{#SINGLETON}]</key>
+                            <history>7d</history>
+                            <value_type>FLOAT</value_type>
+                            <units>B</units>
+                            <description>Average number of client requests per second</description>
+                            <applications>
+                                <application>
+                                    <name>Apache</name>
+                                </application>
+                            </applications>
+                            <preprocessing>
+                                <step>
+                                    <type>JSONPATH</type>
+                                    <params>$.BytesPerReq</params>
+                                </step>
+                            </preprocessing>
+                            <master_item>
+                                <key>apache.get_status</key>
+                            </master_item>
+                        </item_prototype>
+                        <item_prototype>
+                            <name>Apache: Connections async closing</name>
+                            <type>DEPENDENT</type>
+                            <key>apache.connections[async_closing{#SINGLETON}]</key>
+                            <history>7d</history>
+                            <description>Number of async connections in closing state (only applicable to event MPM)</description>
+                            <applications>
+                                <application>
+                                    <name>Apache</name>
+                                </application>
+                            </applications>
+                            <preprocessing>
+                                <step>
+                                    <type>JSONPATH</type>
+                                    <params>$.ConnsAsyncClosing</params>
+                                </step>
+                            </preprocessing>
+                            <master_item>
+                                <key>apache.get_status</key>
+                            </master_item>
+                        </item_prototype>
+                        <item_prototype>
+                            <name>Apache: Connections async keep alive</name>
+                            <type>DEPENDENT</type>
+                            <key>apache.connections[async_keep_alive{#SINGLETON}]</key>
+                            <history>7d</history>
+                            <description>Number of async connections in keep-alive state (only applicable to event MPM)</description>
+                            <applications>
+                                <application>
+                                    <name>Apache</name>
+                                </application>
+                            </applications>
+                            <preprocessing>
+                                <step>
+                                    <type>JSONPATH</type>
+                                    <params>$.ConnsAsyncKeepAlive</params>
+                                </step>
+                            </preprocessing>
+                            <master_item>
+                                <key>apache.get_status</key>
+                            </master_item>
+                        </item_prototype>
+                        <item_prototype>
+                            <name>Apache: Connections async writing</name>
+                            <type>DEPENDENT</type>
+                            <key>apache.connections[async_writing{#SINGLETON}]</key>
+                            <history>7d</history>
+                            <description>Number of async connections in writing state (only applicable to event MPM)</description>
+                            <applications>
+                                <application>
+                                    <name>Apache</name>
+                                </application>
+                            </applications>
+                            <preprocessing>
+                                <step>
+                                    <type>JSONPATH</type>
+                                    <params>$.ConnsAsyncWriting</params>
+                                </step>
+                            </preprocessing>
+                            <master_item>
+                                <key>apache.get_status</key>
+                            </master_item>
+                        </item_prototype>
+                        <item_prototype>
+                            <name>Apache: Connections total</name>
+                            <type>DEPENDENT</type>
+                            <key>apache.connections[total{#SINGLETON}]</key>
+                            <history>7d</history>
+                            <description>Number of total connections</description>
+                            <applications>
+                                <application>
+                                    <name>Apache</name>
+                                </application>
+                            </applications>
+                            <preprocessing>
+                                <step>
+                                    <type>JSONPATH</type>
+                                    <params>$.ConnsTotal</params>
+                                </step>
+                            </preprocessing>
+                            <master_item>
+                                <key>apache.get_status</key>
+                            </master_item>
+                        </item_prototype>
+                        <item_prototype>
+                            <name>Apache: Number of async processes</name>
+                            <type>DEPENDENT</type>
+                            <key>apache.process[num{#SINGLETON}]</key>
+                            <history>7d</history>
+                            <description>Number of async processes</description>
+                            <applications>
+                                <application>
+                                    <name>Apache</name>
+                                </application>
+                            </applications>
+                            <preprocessing>
+                                <step>
+                                    <type>JSONPATH</type>
+                                    <params>$.Processes</params>
+                                </step>
+                            </preprocessing>
+                            <master_item>
+                                <key>apache.get_status</key>
+                            </master_item>
+                        </item_prototype>
+                    </item_prototypes>
+                    <graph_prototypes>
+                        <graph_prototype>
+                            <name>Apache: Current async connections{#SINGLETON}</name>
+                            <graph_items>
+                                <graph_item>
+                                    <color>1A7C11</color>
+                                    <item>
+                                        <host>Template App Apache by HTTP</host>
+                                        <key>apache.connections[async_closing{#SINGLETON}]</key>
+                                    </item>
+                                </graph_item>
+                                <graph_item>
+                                    <color>2774A4</color>
+                                    <item>
+                                        <host>Template App Apache by HTTP</host>
+                                        <key>apache.connections[async_keep_alive{#SINGLETON}]</key>
+                                    </item>
+                                    <sortorder>1</sortorder>
+                                </graph_item>
+                                <graph_item>
+                                    <color>F63100</color>
+                                    <item>
+                                        <host>Template App Apache by HTTP</host>
+                                        <key>apache.connections[async_writing{#SINGLETON}]</key>
+                                    </item>
+                                    <sortorder>2</sortorder>
+                                </graph_item>
+                                <graph_item>
+                                    <color>A54F10</color>
+                                    <item>
+                                        <host>Template App Apache by HTTP</host>
+                                        <key>apache.connections[total{#SINGLETON}]</key>
+                                    </item>
+                                    <sortorder>3</sortorder>
+                                    <drawtype>BOLD_LINE</drawtype>
+                                </graph_item>
+                            </graph_items>
+                        </graph_prototype>
+                        <graph_prototype>
+                            <name>Apache: Current async processes{#SINGLETON}</name>
+                            <graph_items>
+                                <graph_item>
+                                    <color>1A7C11</color>
+                                    <item>
+                                        <host>Template App Apache by HTTP</host>
+                                        <key>apache.process[num{#SINGLETON}]</key>
+                                    </item>
+                                    <drawtype>GRADIENT_LINE</drawtype>
+                                </graph_item>
+                            </graph_items>
+                        </graph_prototype>
+                    </graph_prototypes>
+                    <preprocessing>
+                        <step>
+                            <type>JSONPATH</type>
+                            <params>$.ServerMPM</params>
+                        </step>
+                        <step>
+                            <type>JAVASCRIPT</type>
+                            <params>return JSON.stringify(value === &#39;event&#39; ? [{&#39;{#SINGLETON}&#39;: &#39;&#39;}] : []);</params>
+                        </step>
+                    </preprocessing>
+                    <master_item>
+                        <key>apache.get_status</key>
+                    </master_item>
+                </discovery_rule>
+            </discovery_rules>
+            <macros>
+                <macro>
+                    <macro>{$APACHE.RESPONSE_TIME.MAX.WARN}</macro>
+                    <value>10</value>
+                    <description>Maximum Apache response time in seconds for trigger expression</description>
+                </macro>
+                <macro>
+                    <macro>{$APACHE.STATUS.PATH}</macro>
+                    <value>server-status?auto</value>
+                    <description>The URL path</description>
+                </macro>
+                <macro>
+                    <macro>{$APACHE.STATUS.PORT}</macro>
+                    <value>80</value>
+                    <description>The port of Apache status page</description>
+                </macro>
+                <macro>
+                    <macro>{$APACHE.STATUS.SCHEME}</macro>
+                    <value>http</value>
+                    <description>Request scheme which may be http or https</description>
+                </macro>
+            </macros>
+            <screens>
+                <screen>
+                    <name>Apache performance</name>
+                    <hsize>2</hsize>
+                    <vsize>3</vsize>
+                    <screen_items>
+                        <screen_item>
+                            <resource>
+                                <name>Apache: Requests per second</name>
+                                <host>Template App Apache by HTTP</host>
+                            </resource>
+                            <width>500</width>
+                            <height>100</height>
+                            <colspan>1</colspan>
+                            <rowspan>1</rowspan>
+                            <elements>25</elements>
+                            <max_columns>3</max_columns>
+                        </screen_item>
+                        <screen_item>
+                            <resource>
+                                <name>Apache: Workers total</name>
+                                <host>Template App Apache by HTTP</host>
+                            </resource>
+                            <width>500</width>
+                            <height>100</height>
+                            <x>1</x>
+                            <colspan>1</colspan>
+                            <rowspan>1</rowspan>
+                            <elements>25</elements>
+                            <max_columns>3</max_columns>
+                        </screen_item>
+                        <screen_item>
+                            <resourcetype>20</resourcetype>
+                            <resource>
+                                <name>Apache: Current async connections{#SINGLETON}</name>
+                                <host>Template App Apache by HTTP</host>
+                            </resource>
+                            <width>500</width>
+                            <height>100</height>
+                            <y>1</y>
+                            <colspan>1</colspan>
+                            <rowspan>1</rowspan>
+                            <elements>25</elements>
+                            <max_columns>3</max_columns>
+                        </screen_item>
+                        <screen_item>
+                            <resourcetype>20</resourcetype>
+                            <resource>
+                                <name>Apache: Current async processes{#SINGLETON}</name>
+                                <host>Template App Apache by HTTP</host>
+                            </resource>
+                            <width>500</width>
+                            <height>100</height>
+                            <x>1</x>
+                            <y>1</y>
+                            <colspan>1</colspan>
+                            <rowspan>1</rowspan>
+                            <elements>25</elements>
+                            <max_columns>3</max_columns>
+                        </screen_item>
+                        <screen_item>
+                            <resource>
+                                <name>Apache: Worker states</name>
+                                <host>Template App Apache by HTTP</host>
+                            </resource>
+                            <width>500</width>
+                            <height>100</height>
+                            <y>2</y>
+                            <colspan>1</colspan>
+                            <rowspan>1</rowspan>
+                            <elements>25</elements>
+                            <max_columns>3</max_columns>
+                        </screen_item>
+                    </screen_items>
+                </screen>
+            </screens>
+        </template>
+    </templates>
+    <graphs>
+        <graph>
+            <name>Apache: Requests per second</name>
+            <graph_items>
+                <graph_item>
+                    <color>1A7C11</color>
+                    <item>
+                        <host>Template App Apache by HTTP</host>
+                        <key>apache.requests.rate</key>
+                    </item>
+                    <drawtype>GRADIENT_LINE</drawtype>
+                </graph_item>
+            </graph_items>
+        </graph>
+        <graph>
+            <name>Apache: Worker states</name>
+            <graph_items>
+                <graph_item>
+                    <color>1A7C11</color>
+                    <item>
+                        <host>Template App Apache by HTTP</host>
+                        <key>apache.workers.dnslookup</key>
+                    </item>
+                </graph_item>
+                <graph_item>
+                    <color>2774A4</color>
+                    <item>
+                        <host>Template App Apache by HTTP</host>
+                        <key>apache.workers.cleanup</key>
+                    </item>
+                    <sortorder>1</sortorder>
+                </graph_item>
+                <graph_item>
+                    <color>F63100</color>
+                    <item>
+                        <host>Template App Apache by HTTP</host>
+                        <key>apache.workers.logging</key>
+                    </item>
+                    <sortorder>2</sortorder>
+                </graph_item>
+                <graph_item>
+                    <color>A54F10</color>
+                    <item>
+                        <host>Template App Apache by HTTP</host>
+                        <key>apache.workers.reading</key>
+                    </item>
+                    <sortorder>3</sortorder>
+                </graph_item>
+                <graph_item>
+                    <color>FC6EA3</color>
+                    <item>
+                        <host>Template App Apache by HTTP</host>
+                        <key>apache.workers.sending</key>
+                    </item>
+                    <sortorder>4</sortorder>
+                </graph_item>
+                <graph_item>
+                    <color>6C59DC</color>
+                    <item>
+                        <host>Template App Apache by HTTP</host>
+                        <key>apache.workers.starting</key>
+                    </item>
+                    <sortorder>5</sortorder>
+                </graph_item>
+                <graph_item>
+                    <color>AC8C14</color>
+                    <item>
+                        <host>Template App Apache by HTTP</host>
+                        <key>apache.workers.closing</key>
+                    </item>
+                    <sortorder>6</sortorder>
+                </graph_item>
+                <graph_item>
+                    <color>611F27</color>
+                    <item>
+                        <host>Template App Apache by HTTP</host>
+                        <key>apache.workers.finishing</key>
+                    </item>
+                    <sortorder>7</sortorder>
+                </graph_item>
+                <graph_item>
+                    <color>F230E0</color>
+                    <item>
+                        <host>Template App Apache by HTTP</host>
+                        <key>apache.workers.keepalive</key>
+                    </item>
+                    <sortorder>8</sortorder>
+                </graph_item>
+                <graph_item>
+                    <color>FFAD40</color>
+                    <item>
+                        <host>Template App Apache by HTTP</host>
+                        <key>apache.workers.slot</key>
+                    </item>
+                    <sortorder>9</sortorder>
+                </graph_item>
+                <graph_item>
+                    <color>40CDFF</color>
+                    <item>
+                        <host>Template App Apache by HTTP</host>
+                        <key>apache.workers.waiting</key>
+                    </item>
+                    <sortorder>10</sortorder>
+                </graph_item>
+            </graph_items>
+        </graph>
+        <graph>
+            <name>Apache: Workers total</name>
+            <graph_items>
+                <graph_item>
+                    <color>1A7C11</color>
+                    <item>
+                        <host>Template App Apache by HTTP</host>
+                        <key>apache.workers_total.busy</key>
+                    </item>
+                </graph_item>
+                <graph_item>
+                    <color>2774A4</color>
+                    <item>
+                        <host>Template App Apache by HTTP</host>
+                        <key>apache.workers_total.idle</key>
+                    </item>
+                    <sortorder>1</sortorder>
+                </graph_item>
+            </graph_items>
+        </graph>
+    </graphs>
+    <value_maps>
+        <value_map>
+            <name>Service state</name>
+            <mappings>
+                <mapping>
+                    <value>0</value>
+                    <newvalue>Down</newvalue>
+                </mapping>
+                <mapping>
+                    <value>1</value>
+                    <newvalue>Up</newvalue>
+                </mapping>
+            </mappings>
+        </value_map>
+    </value_maps>
+</zabbix_export>

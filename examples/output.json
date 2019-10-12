@@ -1,0 +1,1032 @@
+{
+    "version": "4.4",
+    "date": "2015-12-30T14:41:30Z",
+    "groups": [
+        {
+            "name": "Templates/Applications"
+        }
+    ],
+    "templates": [
+        {
+            "name": "Template App Apache by HTTP",
+            "template": "Template App Apache by HTTP",
+            "description": "Get metrics from mod_status module using HTTP agent.\r\nhttps://httpd.apache.org/docs/current/mod/mod_status.html\r\n\r\nYou can discuss this template or leave feedback on our forum https://www.zabbix.com/forum/zabbix-suggestions-and-feedback/384764-discussion-thread-for-official-zabbix-template-apache\r\n\r\nTemplate tooling version used: 0.32",
+            "groups": [
+                {
+                    "name": "Templates/Applications"
+                }
+            ],
+            "applications": [
+                {
+                    "name": "Apache"
+                },
+                {
+                    "name": "Zabbix raw items"
+                }
+            ],
+            "items": [
+                {
+                    "name": "Apache: Total bytes",
+                    "type": "DEPENDENT",
+                    "key": "apache.bytes",
+                    "history": "7d",
+                    "value_type": "FLOAT",
+                    "units": "B",
+                    "decription": "Total bytes served",
+                    "applications": [
+                        {
+                            "name": "Apache"
+                        }
+                    ],
+                    "preprocessing": [
+                        {
+                            "type": "JSONPATH",
+                            "params": "$[\"Total kBytes\"]"
+                        },
+                        {
+                            "type": "MULTIPLIER",
+                            "params": "1024"
+                        }
+                    ],
+                    "master_item": {
+                        "key": "apache.get_status"
+                    },
+                    "valuemap": {}
+                },
+                {
+                    "name": "Apache: Bytes per second",
+                    "type": "DEPENDENT",
+                    "key": "apache.bytes.rate",
+                    "history": "7d",
+                    "value_type": "FLOAT",
+                    "units": "Bps",
+                    "decription": "Calculated as change rate for 'Total bytes' stat.\r\nBytesPerSec is not used, as it counts average since last Apache server start.",
+                    "applications": [
+                        {
+                            "name": "Apache"
+                        }
+                    ],
+                    "preprocessing": [
+                        {
+                            "type": "JSONPATH",
+                            "params": "$[\"Total kBytes\"]"
+                        },
+                        {
+                            "type": "MULTIPLIER",
+                            "params": "1024"
+                        },
+                        {
+                            "type": "CHANGE_PER_SECOND"
+                        }
+                    ],
+                    "master_item": {
+                        "key": "apache.get_status"
+                    },
+                    "valuemap": {}
+                },
+                {
+                    "name": "Apache: Get status",
+                    "type": "HTTP_AGENT",
+                    "key": "apache.get_status",
+                    "history": "1h",
+                    "value_type": "TEXT",
+                    "decription": "Getting data from a machine-readable version of the Apache status page.\r\nhttps://httpd.apache.org/docs/current/mod/mod_status.html",
+                    "applications": [
+                        {
+                            "name": "Zabbix raw items"
+                        }
+                    ],
+                    "preprocessing": [
+                        {
+                            "type": "JAVASCRIPT",
+                            "params": "// Convert Apache status to JSON\nvar lines = value.split(\"\\n\");\nvar fields = {},\n    output = {},\n    workers = {\n        \"_\": 0, \"S\": 0, \"R\": 0,\n        \"W\": 0, \"K\": 0, \"D\": 0,\n        \"C\": 0, \"L\": 0, \"G\": 0,\n        \"I\": 0, \".\": 0\n    };\n\n// Get all \"Key: Value\" pairs as an object\nfor (var i = 0; i \u003c lines.length; i++) {\n    var line = lines[i].match(/([A-z0-9 ]+): (.*)/);\n    if (line !== null) {\n        output[line[1]] = isNaN(line[2]) ? line[2] : Number(line[2]);\n    }\n}\n\n// For versions without \"ServerUptimeSeconds\" metric\noutput.ServerUptimeSeconds = output.ServerUptimeSeconds || output.Uptime\n \n// Parse \"Scoreboard\" to get worker count.\nif (typeof output.Scoreboard === 'string') {\n    for (var i = 0; i \u003c output.Scoreboard.length; i++) {\n        var char = output.Scoreboard[i];\n        workers[char]++;\n    }\n}\n \n// Add worker data to the output\noutput.Workers = {\n    waiting: workers[\"_\"], starting: workers[\"S\"], reading: workers[\"R\"],\n    sending: workers[\"W\"], keepalive: workers[\"K\"], dnslookup: workers[\"D\"],\n    closing: workers[\"C\"], logging: workers[\"L\"], finishing: workers[\"G\"],\n    cleanup: workers[\"I\"], slot: workers[\".\"]\n};\n \n// Return JSON string\nreturn JSON.stringify(output);"
+                        }
+                    ],
+                    "master_item": {},
+                    "url": "{$APACHE.STATUS.SCHEME}://{HOST.CONN}:{$APACHE.STATUS.PORT}/{$APACHE.STATUS.PATH}",
+                    "retrieve_mode": "BOTH",
+                    "triggers": [
+                        {
+                            "expression": "{nodata(30m)}=1",
+                            "name": "Apache: Failed to fetch status page (or no data for 30m)",
+                            "priority": "WARNING",
+                            "description": "Zabbix has not received data for items for the last 30 minutes.",
+                            "manual_close": "YES",
+                            "dependencies": [
+                                {
+                                    "Name": "Apache: Service is down",
+                                    "Expression": "{Template App Apache by HTTP:net.tcp.service[http,\"{HOST.CONN}\",\"{$APACHE.STATUS.PORT}\"].last()}=0"
+                                }
+                            ]
+                        }
+                    ],
+                    "valuemap": {}
+                },
+                {
+                    "name": "Apache: Total requests",
+                    "type": "DEPENDENT",
+                    "key": "apache.requests",
+                    "history": "7d",
+                    "decription": "A total number of accesses",
+                    "applications": [
+                        {
+                            "name": "Apache"
+                        }
+                    ],
+                    "preprocessing": [
+                        {
+                            "type": "JSONPATH",
+                            "params": "$[\"Total Accesses\"]"
+                        }
+                    ],
+                    "master_item": {
+                        "key": "apache.get_status"
+                    },
+                    "valuemap": {}
+                },
+                {
+                    "name": "Apache: Requests per second",
+                    "type": "DEPENDENT",
+                    "key": "apache.requests.rate",
+                    "history": "7d",
+                    "value_type": "FLOAT",
+                    "decription": "Calculated as change rate for 'Total requests' stat.\r\nReqPerSec is not used, as it counts average since last Apache server start.",
+                    "applications": [
+                        {
+                            "name": "Apache"
+                        }
+                    ],
+                    "preprocessing": [
+                        {
+                            "type": "JSONPATH",
+                            "params": "$[\"Total Accesses\"]"
+                        },
+                        {
+                            "type": "CHANGE_PER_SECOND"
+                        }
+                    ],
+                    "master_item": {
+                        "key": "apache.get_status"
+                    },
+                    "valuemap": {}
+                },
+                {
+                    "name": "Apache: Uptime",
+                    "type": "DEPENDENT",
+                    "key": "apache.uptime",
+                    "history": "7d",
+                    "units": "uptime",
+                    "decription": "Service uptime in seconds",
+                    "applications": [
+                        {
+                            "name": "Apache"
+                        }
+                    ],
+                    "preprocessing": [
+                        {
+                            "type": "JSONPATH",
+                            "params": "$.ServerUptimeSeconds"
+                        }
+                    ],
+                    "master_item": {
+                        "key": "apache.get_status"
+                    },
+                    "triggers": [
+                        {
+                            "expression": "{last()}\u003c10m",
+                            "name": "Apache: has been restarted (uptime \u003c 10m)",
+                            "priority": "INFO",
+                            "description": "Uptime is less than 10 minutes",
+                            "manual_close": "YES"
+                        }
+                    ],
+                    "valuemap": {}
+                },
+                {
+                    "name": "Apache: Version",
+                    "type": "DEPENDENT",
+                    "key": "apache.version",
+                    "history": "7d",
+                    "value_type": "CHAR",
+                    "decription": "Service version",
+                    "applications": [
+                        {
+                            "name": "Apache"
+                        }
+                    ],
+                    "preprocessing": [
+                        {
+                            "type": "JSONPATH",
+                            "params": "$.ServerVersion"
+                        },
+                        {
+                            "type": "DISCARD_UNCHANGED_HEARTBEAT",
+                            "params": "1d"
+                        }
+                    ],
+                    "master_item": {
+                        "key": "apache.get_status"
+                    },
+                    "triggers": [
+                        {
+                            "expression": "{diff()}=1 and {strlen()}\u003e0",
+                            "name": "Apache: Version has changed (new version: {ITEM.VALUE})",
+                            "priority": "INFO",
+                            "description": "Apache version has changed. Ack to close.",
+                            "manual_close": "YES",
+                            "recovery_mode": "NONE"
+                        }
+                    ],
+                    "valuemap": {}
+                },
+                {
+                    "name": "Apache: Total workers busy",
+                    "type": "DEPENDENT",
+                    "key": "apache.workers_total.busy",
+                    "history": "7d",
+                    "decription": "Total number of busy worker threads/processes",
+                    "applications": [
+                        {
+                            "name": "Apache"
+                        }
+                    ],
+                    "preprocessing": [
+                        {
+                            "type": "JSONPATH",
+                            "params": "$.BusyWorkers"
+                        }
+                    ],
+                    "master_item": {
+                        "key": "apache.get_status"
+                    },
+                    "valuemap": {}
+                },
+                {
+                    "name": "Apache: Total workers idle",
+                    "type": "DEPENDENT",
+                    "key": "apache.workers_total.idle",
+                    "history": "7d",
+                    "decription": "Total number of idle worker threads/processes",
+                    "applications": [
+                        {
+                            "name": "Apache"
+                        }
+                    ],
+                    "preprocessing": [
+                        {
+                            "type": "JSONPATH",
+                            "params": "$.IdleWorkers"
+                        }
+                    ],
+                    "master_item": {
+                        "key": "apache.get_status"
+                    },
+                    "valuemap": {}
+                },
+                {
+                    "name": "Apache: Workers idle cleanup",
+                    "type": "DEPENDENT",
+                    "key": "apache.workers.cleanup",
+                    "history": "7d",
+                    "decription": "Number of workers in cleanup state",
+                    "applications": [
+                        {
+                            "name": "Apache"
+                        }
+                    ],
+                    "preprocessing": [
+                        {
+                            "type": "JSONPATH",
+                            "params": "$.Workers.cleanup"
+                        }
+                    ],
+                    "master_item": {
+                        "key": "apache.get_status"
+                    },
+                    "valuemap": {}
+                },
+                {
+                    "name": "Apache: Workers closing connection",
+                    "type": "DEPENDENT",
+                    "key": "apache.workers.closing",
+                    "history": "7d",
+                    "decription": "Number of workers in closing state",
+                    "applications": [
+                        {
+                            "name": "Apache"
+                        }
+                    ],
+                    "preprocessing": [
+                        {
+                            "type": "JSONPATH",
+                            "params": "$.Workers.closing"
+                        }
+                    ],
+                    "master_item": {
+                        "key": "apache.get_status"
+                    },
+                    "valuemap": {}
+                },
+                {
+                    "name": "Apache: Workers DNS lookup",
+                    "type": "DEPENDENT",
+                    "key": "apache.workers.dnslookup",
+                    "history": "7d",
+                    "decription": "Number of workers in dnslookup state",
+                    "applications": [
+                        {
+                            "name": "Apache"
+                        }
+                    ],
+                    "preprocessing": [
+                        {
+                            "type": "JSONPATH",
+                            "params": "$.Workers.dnslookup"
+                        }
+                    ],
+                    "master_item": {
+                        "key": "apache.get_status"
+                    },
+                    "valuemap": {}
+                },
+                {
+                    "name": "Apache: Workers finishing",
+                    "type": "DEPENDENT",
+                    "key": "apache.workers.finishing",
+                    "history": "7d",
+                    "decription": "Number of workers in finishing state",
+                    "applications": [
+                        {
+                            "name": "Apache"
+                        }
+                    ],
+                    "preprocessing": [
+                        {
+                            "type": "JSONPATH",
+                            "params": "$.Workers.finishing"
+                        }
+                    ],
+                    "master_item": {
+                        "key": "apache.get_status"
+                    },
+                    "valuemap": {}
+                },
+                {
+                    "name": "Apache: Workers keepalive (read)",
+                    "type": "DEPENDENT",
+                    "key": "apache.workers.keepalive",
+                    "history": "7d",
+                    "decription": "Number of workers in keepalive state",
+                    "applications": [
+                        {
+                            "name": "Apache"
+                        }
+                    ],
+                    "preprocessing": [
+                        {
+                            "type": "JSONPATH",
+                            "params": "$.Workers.keepalive"
+                        }
+                    ],
+                    "master_item": {
+                        "key": "apache.get_status"
+                    },
+                    "valuemap": {}
+                },
+                {
+                    "name": "Apache: Workers logging",
+                    "type": "DEPENDENT",
+                    "key": "apache.workers.logging",
+                    "history": "7d",
+                    "decription": "Number of workers in logging state",
+                    "applications": [
+                        {
+                            "name": "Apache"
+                        }
+                    ],
+                    "preprocessing": [
+                        {
+                            "type": "JSONPATH",
+                            "params": "$.Workers.logging"
+                        }
+                    ],
+                    "master_item": {
+                        "key": "apache.get_status"
+                    },
+                    "valuemap": {}
+                },
+                {
+                    "name": "Apache: Workers reading request",
+                    "type": "DEPENDENT",
+                    "key": "apache.workers.reading",
+                    "history": "7d",
+                    "decription": "Number of workers in reading state",
+                    "applications": [
+                        {
+                            "name": "Apache"
+                        }
+                    ],
+                    "preprocessing": [
+                        {
+                            "type": "JSONPATH",
+                            "params": "$.Workers.reading"
+                        }
+                    ],
+                    "master_item": {
+                        "key": "apache.get_status"
+                    },
+                    "valuemap": {}
+                },
+                {
+                    "name": "Apache: Workers sending reply",
+                    "type": "DEPENDENT",
+                    "key": "apache.workers.sending",
+                    "history": "7d",
+                    "decription": "Number of workers in sending state",
+                    "applications": [
+                        {
+                            "name": "Apache"
+                        }
+                    ],
+                    "preprocessing": [
+                        {
+                            "type": "JSONPATH",
+                            "params": "$.Workers.sending"
+                        }
+                    ],
+                    "master_item": {
+                        "key": "apache.get_status"
+                    },
+                    "valuemap": {}
+                },
+                {
+                    "name": "Apache: Workers slot with no current process",
+                    "type": "DEPENDENT",
+                    "key": "apache.workers.slot",
+                    "history": "7d",
+                    "decription": "Number of slots with no current process",
+                    "applications": [
+                        {
+                            "name": "Apache"
+                        }
+                    ],
+                    "preprocessing": [
+                        {
+                            "type": "JSONPATH",
+                            "params": "$.Workers.slot"
+                        }
+                    ],
+                    "master_item": {
+                        "key": "apache.get_status"
+                    },
+                    "valuemap": {}
+                },
+                {
+                    "name": "Apache: Workers starting up",
+                    "type": "DEPENDENT",
+                    "key": "apache.workers.starting",
+                    "history": "7d",
+                    "decription": "Number of workers in starting state",
+                    "applications": [
+                        {
+                            "name": "Apache"
+                        }
+                    ],
+                    "preprocessing": [
+                        {
+                            "type": "JSONPATH",
+                            "params": "$.Workers.starting"
+                        }
+                    ],
+                    "master_item": {
+                        "key": "apache.get_status"
+                    },
+                    "valuemap": {}
+                },
+                {
+                    "name": "Apache: Workers waiting for connection",
+                    "type": "DEPENDENT",
+                    "key": "apache.workers.waiting",
+                    "history": "7d",
+                    "decription": "Number of workers in waiting state",
+                    "applications": [
+                        {
+                            "name": "Apache"
+                        }
+                    ],
+                    "preprocessing": [
+                        {
+                            "type": "JSONPATH",
+                            "params": "$.Workers.waiting"
+                        }
+                    ],
+                    "master_item": {
+                        "key": "apache.get_status"
+                    },
+                    "valuemap": {}
+                },
+                {
+                    "name": "Apache: Service response time",
+                    "type": "SIMPLE",
+                    "key": "net.tcp.service.perf[http,\"{HOST.CONN}\",\"{$APACHE.STATUS.PORT}\"]",
+                    "history": "7d",
+                    "value_type": "FLOAT",
+                    "units": "s",
+                    "applications": [
+                        {
+                            "name": "Apache"
+                        }
+                    ],
+                    "master_item": {},
+                    "triggers": [
+                        {
+                            "expression": "{min(5m)}\u003e{$APACHE.RESPONSE_TIME.MAX.WARN}",
+                            "name": "Apache: Service response time is too high (over {$APACHE.RESPONSE_TIME.MAX.WARN}s for 5m)",
+                            "priority": "WARNING",
+                            "manual_close": "YES",
+                            "dependencies": [
+                                {
+                                    "Name": "Apache: Service is down",
+                                    "Expression": "{Template App Apache by HTTP:net.tcp.service[http,\"{HOST.CONN}\",\"{$APACHE.STATUS.PORT}\"].last()}=0"
+                                }
+                            ]
+                        }
+                    ],
+                    "valuemap": {}
+                },
+                {
+                    "name": "Apache: Service ping",
+                    "type": "SIMPLE",
+                    "key": "net.tcp.service[http,\"{HOST.CONN}\",\"{$APACHE.STATUS.PORT}\"]",
+                    "history": "7d",
+                    "applications": [
+                        {
+                            "name": "Apache"
+                        }
+                    ],
+                    "preprocessing": [
+                        {
+                            "type": "DISCARD_UNCHANGED_HEARTBEAT",
+                            "params": "10m"
+                        }
+                    ],
+                    "master_item": {},
+                    "triggers": [
+                        {
+                            "expression": "{last()}=0",
+                            "name": "Apache: Service is down",
+                            "priority": "AVERAGE",
+                            "manual_close": "YES"
+                        }
+                    ],
+                    "valuemap": {
+                        "name": "Service state"
+                    }
+                }
+            ],
+            "discovery_rules": [
+                {
+                    "name": "Event MPM discovery",
+                    "type": "DEPENDENT",
+                    "key": "apache.mpm.event.discovery",
+                    "decription": "Additional metrics if event MPM is used\r\nhttps://httpd.apache.org/docs/current/mod/event.html",
+                    "item_prototypes": [
+                        {
+                            "name": "Apache: Bytes per request",
+                            "type": "DEPENDENT",
+                            "key": "apache.bytes[per_request{#SINGLETON}]",
+                            "history": "7d",
+                            "value_type": "FLOAT",
+                            "units": "B",
+                            "decription": "Average number of client requests per second",
+                            "applications": [
+                                {
+                                    "name": "Apache"
+                                }
+                            ],
+                            "preprocessing": [
+                                {
+                                    "type": "JSONPATH",
+                                    "params": "$.BytesPerReq"
+                                }
+                            ],
+                            "master_item": {
+                                "key": "apache.get_status"
+                            }
+                        },
+                        {
+                            "name": "Apache: Connections async closing",
+                            "type": "DEPENDENT",
+                            "key": "apache.connections[async_closing{#SINGLETON}]",
+                            "history": "7d",
+                            "decription": "Number of async connections in closing state (only applicable to event MPM)",
+                            "applications": [
+                                {
+                                    "name": "Apache"
+                                }
+                            ],
+                            "preprocessing": [
+                                {
+                                    "type": "JSONPATH",
+                                    "params": "$.ConnsAsyncClosing"
+                                }
+                            ],
+                            "master_item": {
+                                "key": "apache.get_status"
+                            }
+                        },
+                        {
+                            "name": "Apache: Connections async keep alive",
+                            "type": "DEPENDENT",
+                            "key": "apache.connections[async_keep_alive{#SINGLETON}]",
+                            "history": "7d",
+                            "decription": "Number of async connections in keep-alive state (only applicable to event MPM)",
+                            "applications": [
+                                {
+                                    "name": "Apache"
+                                }
+                            ],
+                            "preprocessing": [
+                                {
+                                    "type": "JSONPATH",
+                                    "params": "$.ConnsAsyncKeepAlive"
+                                }
+                            ],
+                            "master_item": {
+                                "key": "apache.get_status"
+                            }
+                        },
+                        {
+                            "name": "Apache: Connections async writing",
+                            "type": "DEPENDENT",
+                            "key": "apache.connections[async_writing{#SINGLETON}]",
+                            "history": "7d",
+                            "decription": "Number of async connections in writing state (only applicable to event MPM)",
+                            "applications": [
+                                {
+                                    "name": "Apache"
+                                }
+                            ],
+                            "preprocessing": [
+                                {
+                                    "type": "JSONPATH",
+                                    "params": "$.ConnsAsyncWriting"
+                                }
+                            ],
+                            "master_item": {
+                                "key": "apache.get_status"
+                            }
+                        },
+                        {
+                            "name": "Apache: Connections total",
+                            "type": "DEPENDENT",
+                            "key": "apache.connections[total{#SINGLETON}]",
+                            "history": "7d",
+                            "decription": "Number of total connections",
+                            "applications": [
+                                {
+                                    "name": "Apache"
+                                }
+                            ],
+                            "preprocessing": [
+                                {
+                                    "type": "JSONPATH",
+                                    "params": "$.ConnsTotal"
+                                }
+                            ],
+                            "master_item": {
+                                "key": "apache.get_status"
+                            }
+                        },
+                        {
+                            "name": "Apache: Number of async processes",
+                            "type": "DEPENDENT",
+                            "key": "apache.process[num{#SINGLETON}]",
+                            "history": "7d",
+                            "decription": "Number of async processes",
+                            "applications": [
+                                {
+                                    "name": "Apache"
+                                }
+                            ],
+                            "preprocessing": [
+                                {
+                                    "type": "JSONPATH",
+                                    "params": "$.Processes"
+                                }
+                            ],
+                            "master_item": {
+                                "key": "apache.get_status"
+                            }
+                        }
+                    ],
+                    "graph_prototypes": [
+                        {
+                            "name": "Apache: Current async connections{#SINGLETON}",
+                            "graph_items": [
+                                {
+                                    "color": "1A7C11",
+                                    "item": {
+                                        "host": "Template App Apache by HTTP",
+                                        "key": "apache.connections[async_closing{#SINGLETON}]"
+                                    }
+                                },
+                                {
+                                    "color": "2774A4",
+                                    "item": {
+                                        "host": "Template App Apache by HTTP",
+                                        "key": "apache.connections[async_keep_alive{#SINGLETON}]"
+                                    },
+                                    "sortorder": 1
+                                },
+                                {
+                                    "color": "F63100",
+                                    "item": {
+                                        "host": "Template App Apache by HTTP",
+                                        "key": "apache.connections[async_writing{#SINGLETON}]"
+                                    },
+                                    "sortorder": 2
+                                },
+                                {
+                                    "color": "A54F10",
+                                    "item": {
+                                        "host": "Template App Apache by HTTP",
+                                        "key": "apache.connections[total{#SINGLETON}]"
+                                    },
+                                    "sortorder": 3,
+                                    "drawtype": "BOLD_LINE"
+                                }
+                            ]
+                        },
+                        {
+                            "name": "Apache: Current async processes{#SINGLETON}",
+                            "graph_items": [
+                                {
+                                    "color": "1A7C11",
+                                    "item": {
+                                        "host": "Template App Apache by HTTP",
+                                        "key": "apache.process[num{#SINGLETON}]"
+                                    },
+                                    "drawtype": "GRADIENT_LINE"
+                                }
+                            ]
+                        }
+                    ],
+                    "preprocessing": [
+                        {
+                            "type": "JSONPATH",
+                            "params": "$.ServerMPM"
+                        },
+                        {
+                            "type": "JAVASCRIPT",
+                            "params": "return JSON.stringify(value === 'event' ? [{'{#SINGLETON}': ''}] : []);"
+                        }
+                    ],
+                    "master_item": {
+                        "key": "apache.get_status"
+                    }
+                }
+            ],
+            "macros": [
+                {
+                    "macro": "{$APACHE.RESPONSE_TIME.MAX.WARN}",
+                    "value": "10",
+                    "description": "Maximum Apache response time in seconds for trigger expression"
+                },
+                {
+                    "macro": "{$APACHE.STATUS.PATH}",
+                    "value": "server-status?auto",
+                    "description": "The URL path"
+                },
+                {
+                    "macro": "{$APACHE.STATUS.PORT}",
+                    "value": "80",
+                    "description": "The port of Apache status page"
+                },
+                {
+                    "macro": "{$APACHE.STATUS.SCHEME}",
+                    "value": "http",
+                    "description": "Request scheme which may be http or https"
+                }
+            ],
+            "screens": [
+                {
+                    "name": "Apache performance",
+                    "hsize": 2,
+                    "vsize": 3,
+                    "screen_items": [
+                        {
+                            "resource": {
+                                "name": "Apache: Requests per second",
+                                "host": "Template App Apache by HTTP"
+                            },
+                            "width": 500,
+                            "height": 100,
+                            "colspan": 1,
+                            "rowspan": 1,
+                            "elements": 25,
+                            "max_columns": 3
+                        },
+                        {
+                            "resource": {
+                                "name": "Apache: Workers total",
+                                "host": "Template App Apache by HTTP"
+                            },
+                            "width": 500,
+                            "height": 100,
+                            "x": 1,
+                            "colspan": 1,
+                            "rowspan": 1,
+                            "elements": 25,
+                            "max_columns": 3
+                        },
+                        {
+                            "resourcetype": 20,
+                            "resource": {
+                                "name": "Apache: Current async connections{#SINGLETON}",
+                                "host": "Template App Apache by HTTP"
+                            },
+                            "width": 500,
+                            "height": 100,
+                            "y": 1,
+                            "colspan": 1,
+                            "rowspan": 1,
+                            "elements": 25,
+                            "max_columns": 3
+                        },
+                        {
+                            "resourcetype": 20,
+                            "resource": {
+                                "name": "Apache: Current async processes{#SINGLETON}",
+                                "host": "Template App Apache by HTTP"
+                            },
+                            "width": 500,
+                            "height": 100,
+                            "x": 1,
+                            "y": 1,
+                            "colspan": 1,
+                            "rowspan": 1,
+                            "elements": 25,
+                            "max_columns": 3
+                        },
+                        {
+                            "resource": {
+                                "name": "Apache: Worker states",
+                                "host": "Template App Apache by HTTP"
+                            },
+                            "width": 500,
+                            "height": 100,
+                            "y": 2,
+                            "colspan": 1,
+                            "rowspan": 1,
+                            "elements": 25,
+                            "max_columns": 3
+                        }
+                    ]
+                }
+            ]
+        }
+    ],
+    "graphs": [
+        {
+            "name": "Apache: Requests per second",
+            "graph_items": [
+                {
+                    "color": "1A7C11",
+                    "item": {
+                        "host": "Template App Apache by HTTP",
+                        "key": "apache.requests.rate"
+                    },
+                    "drawtype": "GRADIENT_LINE"
+                }
+            ]
+        },
+        {
+            "name": "Apache: Worker states",
+            "graph_items": [
+                {
+                    "color": "1A7C11",
+                    "item": {
+                        "host": "Template App Apache by HTTP",
+                        "key": "apache.workers.dnslookup"
+                    }
+                },
+                {
+                    "color": "2774A4",
+                    "item": {
+                        "host": "Template App Apache by HTTP",
+                        "key": "apache.workers.cleanup"
+                    },
+                    "sortorder": 1
+                },
+                {
+                    "color": "F63100",
+                    "item": {
+                        "host": "Template App Apache by HTTP",
+                        "key": "apache.workers.logging"
+                    },
+                    "sortorder": 2
+                },
+                {
+                    "color": "A54F10",
+                    "item": {
+                        "host": "Template App Apache by HTTP",
+                        "key": "apache.workers.reading"
+                    },
+                    "sortorder": 3
+                },
+                {
+                    "color": "FC6EA3",
+                    "item": {
+                        "host": "Template App Apache by HTTP",
+                        "key": "apache.workers.sending"
+                    },
+                    "sortorder": 4
+                },
+                {
+                    "color": "6C59DC",
+                    "item": {
+                        "host": "Template App Apache by HTTP",
+                        "key": "apache.workers.starting"
+                    },
+                    "sortorder": 5
+                },
+                {
+                    "color": "AC8C14",
+                    "item": {
+                        "host": "Template App Apache by HTTP",
+                        "key": "apache.workers.closing"
+                    },
+                    "sortorder": 6
+                },
+                {
+                    "color": "611F27",
+                    "item": {
+                        "host": "Template App Apache by HTTP",
+                        "key": "apache.workers.finishing"
+                    },
+                    "sortorder": 7
+                },
+                {
+                    "color": "F230E0",
+                    "item": {
+                        "host": "Template App Apache by HTTP",
+                        "key": "apache.workers.keepalive"
+                    },
+                    "sortorder": 8
+                },
+                {
+                    "color": "FFAD40",
+                    "item": {
+                        "host": "Template App Apache by HTTP",
+                        "key": "apache.workers.slot"
+                    },
+                    "sortorder": 9
+                },
+                {
+                    "color": "40CDFF",
+                    "item": {
+                        "host": "Template App Apache by HTTP",
+                        "key": "apache.workers.waiting"
+                    },
+                    "sortorder": 10
+                }
+            ]
+        },
+        {
+            "name": "Apache: Workers total",
+            "graph_items": [
+                {
+                    "color": "1A7C11",
+                    "item": {
+                        "host": "Template App Apache by HTTP",
+                        "key": "apache.workers_total.busy"
+                    }
+                },
+                {
+                    "color": "2774A4",
+                    "item": {
+                        "host": "Template App Apache by HTTP",
+                        "key": "apache.workers_total.idle"
+                    },
+                    "sortorder": 1
+                }
+            ]
+        }
+    ],
+    "value_maps": [
+        {
+            "name": "Service state",
+            "mappings": [
+                {
+                    "value": "0",
+                    "newvalue": "Down"
+                },
+                {
+                    "value": "1",
+                    "newvalue": "Up"
+                }
+            ]
+        }
+    ]
+}
