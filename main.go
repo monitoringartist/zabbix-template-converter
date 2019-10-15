@@ -88,7 +88,13 @@ func main() {
 			fmt.Printf("Input XML file marshal error: %s\n", err.Error())
 			os.Exit(1)
 		}
-                outData = []byte(xml.Header + string(outData) + "\n")
+		// pair replacement to match Zabbix XML style
+		r := strings.NewReplacer("&#34;", "\"",
+			"&#39;", "'",
+			"&#xD;", "&#13;",
+			"&#xA;", "\n",
+		)
+		outData = []byte(xml.Header + r.Replace(string(outData)) + "\n")
 	case "json":
 		outData, err = json.MarshalIndent(templ, "", "    ")
 		if err != nil {
