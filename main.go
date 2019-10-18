@@ -7,11 +7,18 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"regexp"
 	"strings"
 
-	"github.com/monitoringartist/go-zabbix/domain"
+	v40 "github.com/monitoringartist/go-zabbix/v40"
+	v44 "github.com/monitoringartist/go-zabbix/v44"
 	"gopkg.in/yaml.v3"
 )
+
+type ZabbixExport struct {
+	XMLName xml.Name `xml:"zabbix_export" json:"-" yaml:"-"`
+	Version string   `xml:"version,omitempty" json:"version,omitempty" yaml:"version,omitempty"`
+}
 
 func main() {
 	in := flag.String("in", "", "input template file with xml/json/yaml extension")
@@ -51,7 +58,42 @@ func main() {
 		os.Exit(1)
 	}
 
-	templ := &domain.ZabbixExport{}
+	// version parsing
+	templVersion := &ZabbixExport{}
+	switch sIn[len(sIn)-1] {
+	case "xml":
+		err = xml.Unmarshal([]byte(inData), &templVersion)
+		if err != nil {
+			fmt.Printf("Input XML file unmarshal error: %s\n", err.Error())
+			os.Exit(1)
+		}
+	case "json":
+		err = json.Unmarshal([]byte(inData), &templVersion)
+		if err != nil {
+			fmt.Printf("Input JSON file unmarshal error: %s\n", err.Error())
+			os.Exit(1)
+		}
+	case "yaml":
+		err = yaml.Unmarshal([]byte(inData), &templVersion)
+		if err != nil {
+			fmt.Printf("Input YAML file unmarshal error: %s\n", err.Error())
+			os.Exit(1)
+		}
+	}
+
+	if templVersion.Version != "4.4" && templVersion.Version != "4.2" && templVersion.Version != "4.0" {
+		fmt.Printf("Unsupported Zabbix template version %s, only versions 4.4/4.2/4.0 are supported\n", templVersion.Version)
+		os.Exit(1)
+	}
+
+	var templ interface{}
+	if templVersion.Version == "4.4" {
+		//v4.4
+		templ = &v44.ZabbixExport{}
+	} else {
+		// probably v4.2 = v4.0
+		templ = &v40.ZabbixExport{}
+	}
 
 	switch sIn[len(sIn)-1] {
 	case "xml":
@@ -74,11 +116,6 @@ func main() {
 		}
 	}
 
-	if templ.Version != "4.4" {
-		fmt.Printf("Unsupported Zabbix template version %s, only 4.4 is supported\n", templ.Version)
-		os.Exit(1)
-	}
-
 	var outData []byte
 
 	switch sOut[len(sOut)-1] {
@@ -93,8 +130,17 @@ func main() {
 			"&#39;", "'",
 			"&#xD;", "&#13;",
 			"&#xA;", "\n",
+			"<mappings></mappings>", "",
+			"<triggers></triggers>", "",
+			"<params></params>", "<params/>",
+			"<url></url>", "<url/>",
+			"<application></application>", "<application/>",
+			"<master_item></master_item>", "",
+			"<dependencies></dependencies>", "",
+			"<preprocessing></preprocessing>", "",
 		)
-		outData = []byte(xml.Header + r.Replace(string(outData)) + "\n")
+		re := regexp.MustCompile("(?m)^\\s*$[\r\n]*")
+		outData = []byte(xml.Header + re.ReplaceAllString(r.Replace(string(outData)), "") + "\n")
 	case "json":
 		outData, err = json.MarshalIndent(templ, "", "    ")
 		if err != nil {
