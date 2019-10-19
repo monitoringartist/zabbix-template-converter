@@ -3,8 +3,8 @@ date: "2015-12-30T14:41:30Z"
 groups:
   - name: Templates/Applications
 templates:
-  - name: Template App Apache by HTTP
-    template: Template App Apache by HTTP
+  - template: Template App Apache by HTTP
+    name: Template App Apache by HTTP
     description: "Get metrics from mod_status module using HTTP agent.\r\nhttps://httpd.apache.org/docs/current/mod/mod_status.html\r\n\r\nYou
         can discuss this template or leave feedback on our forum https://www.zabbix.com/forum/zabbix-suggestions-and-feedback/384764-discussion-thread-for-official-zabbix-template-apache\r\n\r\nTemplate
         tooling version used: 0.32"
@@ -17,6 +17,7 @@ templates:
       - name: 'Apache: Total bytes'
         type: DEPENDENT
         key: apache.bytes
+        delay: "0"
         history: 7d
         value_type: FLOAT
         units: B
@@ -33,6 +34,7 @@ templates:
       - name: 'Apache: Bytes per second'
         type: DEPENDENT
         key: apache.bytes.rate
+        delay: "0"
         history: 7d
         value_type: FLOAT
         units: Bps
@@ -52,6 +54,7 @@ templates:
         type: HTTP_AGENT
         key: apache.get_status
         history: 1h
+        trends: "0"
         value_type: TEXT
         description: "Getting data from a machine-readable version of the Apache status
             page.\r\nhttps://httpd.apache.org/docs/current/mod/mod_status.html"
@@ -91,6 +94,7 @@ templates:
       - name: 'Apache: Total requests'
         type: DEPENDENT
         key: apache.requests
+        delay: "0"
         history: 7d
         description: A total number of accesses
         applications:
@@ -103,6 +107,7 @@ templates:
       - name: 'Apache: Requests per second'
         type: DEPENDENT
         key: apache.requests.rate
+        delay: "0"
         history: 7d
         value_type: FLOAT
         description: "Calculated as change rate for 'Total requests' stat.\r\nReqPerSec
@@ -118,6 +123,7 @@ templates:
       - name: 'Apache: Uptime'
         type: DEPENDENT
         key: apache.uptime
+        delay: "0"
         history: 7d
         units: uptime
         description: Service uptime in seconds
@@ -137,7 +143,9 @@ templates:
       - name: 'Apache: Version'
         type: DEPENDENT
         key: apache.version
+        delay: "0"
         history: 7d
+        trends: "0"
         value_type: CHAR
         description: Service version
         applications:
@@ -151,14 +159,15 @@ templates:
             key: apache.get_status
         triggers:
           - expression: '{diff()}=1 and {strlen()}>0'
+            recovery_mode: NONE
             name: 'Apache: Version has changed (new version: {ITEM.VALUE})'
             priority: INFO
             description: Apache version has changed. Ack to close.
             manual_close: YES
-            recovery_mode: NONE
       - name: 'Apache: Total workers busy'
         type: DEPENDENT
         key: apache.workers_total.busy
+        delay: "0"
         history: 7d
         description: Total number of busy worker threads/processes
         applications:
@@ -171,6 +180,7 @@ templates:
       - name: 'Apache: Total workers idle'
         type: DEPENDENT
         key: apache.workers_total.idle
+        delay: "0"
         history: 7d
         description: Total number of idle worker threads/processes
         applications:
@@ -183,6 +193,7 @@ templates:
       - name: 'Apache: Workers idle cleanup'
         type: DEPENDENT
         key: apache.workers.cleanup
+        delay: "0"
         history: 7d
         description: Number of workers in cleanup state
         applications:
@@ -195,6 +206,7 @@ templates:
       - name: 'Apache: Workers closing connection'
         type: DEPENDENT
         key: apache.workers.closing
+        delay: "0"
         history: 7d
         description: Number of workers in closing state
         applications:
@@ -207,6 +219,7 @@ templates:
       - name: 'Apache: Workers DNS lookup'
         type: DEPENDENT
         key: apache.workers.dnslookup
+        delay: "0"
         history: 7d
         description: Number of workers in dnslookup state
         applications:
@@ -219,6 +232,7 @@ templates:
       - name: 'Apache: Workers finishing'
         type: DEPENDENT
         key: apache.workers.finishing
+        delay: "0"
         history: 7d
         description: Number of workers in finishing state
         applications:
@@ -231,6 +245,7 @@ templates:
       - name: 'Apache: Workers keepalive (read)'
         type: DEPENDENT
         key: apache.workers.keepalive
+        delay: "0"
         history: 7d
         description: Number of workers in keepalive state
         applications:
@@ -243,6 +258,7 @@ templates:
       - name: 'Apache: Workers logging'
         type: DEPENDENT
         key: apache.workers.logging
+        delay: "0"
         history: 7d
         description: Number of workers in logging state
         applications:
@@ -255,6 +271,7 @@ templates:
       - name: 'Apache: Workers reading request'
         type: DEPENDENT
         key: apache.workers.reading
+        delay: "0"
         history: 7d
         description: Number of workers in reading state
         applications:
@@ -267,6 +284,7 @@ templates:
       - name: 'Apache: Workers sending reply'
         type: DEPENDENT
         key: apache.workers.sending
+        delay: "0"
         history: 7d
         description: Number of workers in sending state
         applications:
@@ -279,6 +297,7 @@ templates:
       - name: 'Apache: Workers slot with no current process'
         type: DEPENDENT
         key: apache.workers.slot
+        delay: "0"
         history: 7d
         description: Number of slots with no current process
         applications:
@@ -291,6 +310,7 @@ templates:
       - name: 'Apache: Workers starting up'
         type: DEPENDENT
         key: apache.workers.starting
+        delay: "0"
         history: 7d
         description: Number of workers in starting state
         applications:
@@ -303,6 +323,7 @@ templates:
       - name: 'Apache: Workers waiting for connection'
         type: DEPENDENT
         key: apache.workers.waiting
+        delay: "0"
         history: 7d
         description: Number of workers in waiting state
         applications:
@@ -335,6 +356,8 @@ templates:
         history: 7d
         applications:
           - name: Apache
+        valuemap:
+            name: Service state
         preprocessing:
           - type: DISCARD_UNCHANGED_HEARTBEAT
             params: 10m
@@ -343,17 +366,17 @@ templates:
             name: 'Apache: Service is down'
             priority: AVERAGE
             manual_close: YES
-        valuemap:
-            name: Service state
     discovery_rules:
       - name: Event MPM discovery
         type: DEPENDENT
         key: apache.mpm.event.discovery
+        delay: "0"
         description: "Additional metrics if event MPM is used\r\nhttps://httpd.apache.org/docs/current/mod/event.html"
         item_prototypes:
           - name: 'Apache: Bytes per request'
             type: DEPENDENT
             key: apache.bytes[per_request{#SINGLETON}]
+            delay: "0"
             history: 7d
             value_type: FLOAT
             units: B
@@ -368,6 +391,7 @@ templates:
           - name: 'Apache: Connections async closing'
             type: DEPENDENT
             key: apache.connections[async_closing{#SINGLETON}]
+            delay: "0"
             history: 7d
             description: Number of async connections in closing state (only applicable
                 to event MPM)
@@ -381,6 +405,7 @@ templates:
           - name: 'Apache: Connections async keep alive'
             type: DEPENDENT
             key: apache.connections[async_keep_alive{#SINGLETON}]
+            delay: "0"
             history: 7d
             description: Number of async connections in keep-alive state (only applicable
                 to event MPM)
@@ -394,6 +419,7 @@ templates:
           - name: 'Apache: Connections async writing'
             type: DEPENDENT
             key: apache.connections[async_writing{#SINGLETON}]
+            delay: "0"
             history: 7d
             description: Number of async connections in writing state (only applicable
                 to event MPM)
@@ -407,6 +433,7 @@ templates:
           - name: 'Apache: Connections total'
             type: DEPENDENT
             key: apache.connections[total{#SINGLETON}]
+            delay: "0"
             history: 7d
             description: Number of total connections
             applications:
@@ -419,6 +446,7 @@ templates:
           - name: 'Apache: Number of async processes'
             type: DEPENDENT
             key: apache.process[num{#SINGLETON}]
+            delay: "0"
             history: 7d
             description: Number of async processes
             applications:
@@ -435,37 +463,37 @@ templates:
                 item:
                     host: Template App Apache by HTTP
                     key: apache.connections[async_closing{#SINGLETON}]
-              - color: 2774A4
+              - sortorder: 1
+                color: 2774A4
                 item:
                     host: Template App Apache by HTTP
                     key: apache.connections[async_keep_alive{#SINGLETON}]
-                sortorder: 1
-              - color: F63100
+              - sortorder: 2
+                color: F63100
                 item:
                     host: Template App Apache by HTTP
                     key: apache.connections[async_writing{#SINGLETON}]
-                sortorder: 2
-              - color: A54F10
+              - sortorder: 3
+                drawtype: BOLD_LINE
+                color: A54F10
                 item:
                     host: Template App Apache by HTTP
                     key: apache.connections[total{#SINGLETON}]
-                sortorder: 3
-                drawtype: BOLD_LINE
           - name: 'Apache: Current async processes{#SINGLETON}'
             graph_items:
-              - color: 1A7C11
+              - drawtype: GRADIENT_LINE
+                color: 1A7C11
                 item:
                     host: Template App Apache by HTTP
                     key: apache.process[num{#SINGLETON}]
-                drawtype: GRADIENT_LINE
+        master_item:
+            key: apache.get_status
         preprocessing:
           - type: JSONPATH
             params: $.ServerMPM
           - type: JAVASCRIPT
             params: 'return JSON.stringify(value === ''event'' ? [{''{#SINGLETON}'':
                 ''''}] : []);'
-        master_item:
-            key: apache.get_status
     macros:
       - macro: '{$APACHE.RESPONSE_TIME.MAX.WARN}'
         value: "10"
@@ -544,78 +572,79 @@ templates:
 graphs:
   - name: 'Apache: Requests per second'
     graph_items:
-      - color: 1A7C11
+      - drawtype: GRADIENT_LINE
+        color: 1A7C11
         item:
             host: Template App Apache by HTTP
             key: apache.requests.rate
-        drawtype: GRADIENT_LINE
   - name: 'Apache: Worker states'
     graph_items:
       - color: 1A7C11
         item:
             host: Template App Apache by HTTP
             key: apache.workers.dnslookup
-      - color: 2774A4
+      - sortorder: 1
+        color: 2774A4
         item:
             host: Template App Apache by HTTP
             key: apache.workers.cleanup
-        sortorder: 1
-      - color: F63100
+      - sortorder: 2
+        color: F63100
         item:
             host: Template App Apache by HTTP
             key: apache.workers.logging
-        sortorder: 2
-      - color: A54F10
+      - sortorder: 3
+        color: A54F10
         item:
             host: Template App Apache by HTTP
             key: apache.workers.reading
-        sortorder: 3
-      - color: FC6EA3
+      - sortorder: 4
+        color: FC6EA3
         item:
             host: Template App Apache by HTTP
             key: apache.workers.sending
-        sortorder: 4
-      - color: 6C59DC
+      - sortorder: 5
+        color: 6C59DC
         item:
             host: Template App Apache by HTTP
             key: apache.workers.starting
-        sortorder: 5
-      - color: AC8C14
+      - sortorder: 6
+        color: AC8C14
         item:
             host: Template App Apache by HTTP
             key: apache.workers.closing
-        sortorder: 6
-      - color: 611F27
+      - sortorder: 7
+        color: 611F27
         item:
             host: Template App Apache by HTTP
             key: apache.workers.finishing
-        sortorder: 7
-      - color: F230E0
+      - sortorder: 8
+        color: F230E0
         item:
             host: Template App Apache by HTTP
             key: apache.workers.keepalive
-        sortorder: 8
-      - color: FFAD40
+      - sortorder: 9
+        color: FFAD40
         item:
             host: Template App Apache by HTTP
             key: apache.workers.slot
-        sortorder: 9
-      - color: 40CDFF
+      - sortorder: 10
+        color: 40CDFF
         item:
             host: Template App Apache by HTTP
             key: apache.workers.waiting
-        sortorder: 10
   - name: 'Apache: Workers total'
+    type: STACKED
     graph_items:
       - color: 1A7C11
         item:
             host: Template App Apache by HTTP
             key: apache.workers_total.busy
-      - color: 2774A4
+      - sortorder: 1
+        color: 2774A4
         item:
             host: Template App Apache by HTTP
             key: apache.workers_total.idle
-        sortorder: 1
 value_maps:
   - name: Service state
     mappings:

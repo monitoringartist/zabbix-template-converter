@@ -9,9 +9,14 @@
     </groups>
     <templates>
         <template>
-            <name>Template App Apache by HTTP</name>
             <template>Template App Apache by HTTP</template>
-            <description>Get metrics from mod_status module using HTTP agent.&#xD;&#xA;https://httpd.apache.org/docs/current/mod/mod_status.html&#xD;&#xA;&#xD;&#xA;You can discuss this template or leave feedback on our forum https://www.zabbix.com/forum/zabbix-suggestions-and-feedback/384764-discussion-thread-for-official-zabbix-template-apache&#xD;&#xA;&#xD;&#xA;Template tooling version used: 0.32</description>
+            <name>Template App Apache by HTTP</name>
+            <description>Get metrics from mod_status module using HTTP agent.&#13;
+https://httpd.apache.org/docs/current/mod/mod_status.html&#13;
+&#13;
+You can discuss this template or leave feedback on our forum https://www.zabbix.com/forum/zabbix-suggestions-and-feedback/384764-discussion-thread-for-official-zabbix-template-apache&#13;
+&#13;
+Template tooling version used: 0.32</description>
             <groups>
                 <group>
                     <name>Templates/Applications</name>
@@ -30,6 +35,7 @@
                     <name>Apache: Total bytes</name>
                     <type>DEPENDENT</type>
                     <key>apache.bytes</key>
+                    <delay>0</delay>
                     <history>7d</history>
                     <value_type>FLOAT</value_type>
                     <units>B</units>
@@ -42,7 +48,7 @@
                     <preprocessing>
                         <step>
                             <type>JSONPATH</type>
-                            <params>$[&#34;Total kBytes&#34;]</params>
+                            <params>$["Total kBytes"]</params>
                         </step>
                         <step>
                             <type>MULTIPLIER</type>
@@ -52,19 +58,17 @@
                     <master_item>
                         <key>apache.get_status</key>
                     </master_item>
-                    <triggers></triggers>
-                    <valuemap>
-                        <mappings></mappings>
-                    </valuemap>
                 </item>
                 <item>
                     <name>Apache: Bytes per second</name>
                     <type>DEPENDENT</type>
                     <key>apache.bytes.rate</key>
+                    <delay>0</delay>
                     <history>7d</history>
                     <value_type>FLOAT</value_type>
                     <units>Bps</units>
-                    <description>Calculated as change rate for &#39;Total bytes&#39; stat.&#xD;&#xA;BytesPerSec is not used, as it counts average since last Apache server start.</description>
+                    <description>Calculated as change rate for 'Total bytes' stat.&#13;
+BytesPerSec is not used, as it counts average since last Apache server start.</description>
                     <applications>
                         <application>
                             <name>Apache</name>
@@ -73,7 +77,7 @@
                     <preprocessing>
                         <step>
                             <type>JSONPATH</type>
-                            <params>$[&#34;Total kBytes&#34;]</params>
+                            <params>$["Total kBytes"]</params>
                         </step>
                         <step>
                             <type>MULTIPLIER</type>
@@ -81,23 +85,22 @@
                         </step>
                         <step>
                             <type>CHANGE_PER_SECOND</type>
+                            <params/>
                         </step>
                     </preprocessing>
                     <master_item>
                         <key>apache.get_status</key>
                     </master_item>
-                    <triggers></triggers>
-                    <valuemap>
-                        <mappings></mappings>
-                    </valuemap>
                 </item>
                 <item>
                     <name>Apache: Get status</name>
                     <type>HTTP_AGENT</type>
                     <key>apache.get_status</key>
                     <history>1h</history>
+                    <trends>0</trends>
                     <value_type>TEXT</value_type>
-                    <description>Getting data from a machine-readable version of the Apache status page.&#xD;&#xA;https://httpd.apache.org/docs/current/mod/mod_status.html</description>
+                    <description>Getting data from a machine-readable version of the Apache status page.&#13;
+https://httpd.apache.org/docs/current/mod/mod_status.html</description>
                     <applications>
                         <application>
                             <name>Zabbix raw items</name>
@@ -106,10 +109,43 @@
                     <preprocessing>
                         <step>
                             <type>JAVASCRIPT</type>
-                            <params>// Convert Apache status to JSON&#xA;var lines = value.split(&#34;\n&#34;);&#xA;var fields = {},&#xA;    output = {},&#xA;    workers = {&#xA;        &#34;_&#34;: 0, &#34;S&#34;: 0, &#34;R&#34;: 0,&#xA;        &#34;W&#34;: 0, &#34;K&#34;: 0, &#34;D&#34;: 0,&#xA;        &#34;C&#34;: 0, &#34;L&#34;: 0, &#34;G&#34;: 0,&#xA;        &#34;I&#34;: 0, &#34;.&#34;: 0&#xA;    };&#xA;&#xA;// Get all &#34;Key: Value&#34; pairs as an object&#xA;for (var i = 0; i &lt; lines.length; i++) {&#xA;    var line = lines[i].match(/([A-z0-9 ]+): (.*)/);&#xA;    if (line !== null) {&#xA;        output[line[1]] = isNaN(line[2]) ? line[2] : Number(line[2]);&#xA;    }&#xA;}&#xA;&#xA;// For versions without &#34;ServerUptimeSeconds&#34; metric&#xA;output.ServerUptimeSeconds = output.ServerUptimeSeconds || output.Uptime&#xA; &#xA;// Parse &#34;Scoreboard&#34; to get worker count.&#xA;if (typeof output.Scoreboard === &#39;string&#39;) {&#xA;    for (var i = 0; i &lt; output.Scoreboard.length; i++) {&#xA;        var char = output.Scoreboard[i];&#xA;        workers[char]++;&#xA;    }&#xA;}&#xA; &#xA;// Add worker data to the output&#xA;output.Workers = {&#xA;    waiting: workers[&#34;_&#34;], starting: workers[&#34;S&#34;], reading: workers[&#34;R&#34;],&#xA;    sending: workers[&#34;W&#34;], keepalive: workers[&#34;K&#34;], dnslookup: workers[&#34;D&#34;],&#xA;    closing: workers[&#34;C&#34;], logging: workers[&#34;L&#34;], finishing: workers[&#34;G&#34;],&#xA;    cleanup: workers[&#34;I&#34;], slot: workers[&#34;.&#34;]&#xA;};&#xA; &#xA;// Return JSON string&#xA;return JSON.stringify(output);</params>
+                            <params>// Convert Apache status to JSON
+var lines = value.split("\n");
+var fields = {},
+    output = {},
+    workers = {
+        "_": 0, "S": 0, "R": 0,
+        "W": 0, "K": 0, "D": 0,
+        "C": 0, "L": 0, "G": 0,
+        "I": 0, ".": 0
+    };
+// Get all "Key: Value" pairs as an object
+for (var i = 0; i &lt; lines.length; i++) {
+    var line = lines[i].match(/([A-z0-9 ]+): (.*)/);
+    if (line !== null) {
+        output[line[1]] = isNaN(line[2]) ? line[2] : Number(line[2]);
+    }
+}
+// For versions without "ServerUptimeSeconds" metric
+output.ServerUptimeSeconds = output.ServerUptimeSeconds || output.Uptime
+// Parse "Scoreboard" to get worker count.
+if (typeof output.Scoreboard === 'string') {
+    for (var i = 0; i &lt; output.Scoreboard.length; i++) {
+        var char = output.Scoreboard[i];
+        workers[char]++;
+    }
+}
+// Add worker data to the output
+output.Workers = {
+    waiting: workers["_"], starting: workers["S"], reading: workers["R"],
+    sending: workers["W"], keepalive: workers["K"], dnslookup: workers["D"],
+    closing: workers["C"], logging: workers["L"], finishing: workers["G"],
+    cleanup: workers["I"], slot: workers["."]
+};
+// Return JSON string
+return JSON.stringify(output);</params>
                         </step>
                     </preprocessing>
-                    <master_item></master_item>
                     <url>{$APACHE.STATUS.SCHEME}://{HOST.CONN}:{$APACHE.STATUS.PORT}/{$APACHE.STATUS.PATH}</url>
                     <retrieve_mode>BOTH</retrieve_mode>
                     <triggers>
@@ -122,19 +158,17 @@
                             <dependencies>
                                 <dependency>
                                     <name>Apache: Service is down</name>
-                                    <expression>{Template App Apache by HTTP:net.tcp.service[http,&#34;{HOST.CONN}&#34;,&#34;{$APACHE.STATUS.PORT}&#34;].last()}=0</expression>
+                                    <expression>{Template App Apache by HTTP:net.tcp.service[http,"{HOST.CONN}","{$APACHE.STATUS.PORT}"].last()}=0</expression>
                                 </dependency>
                             </dependencies>
                         </trigger>
                     </triggers>
-                    <valuemap>
-                        <mappings></mappings>
-                    </valuemap>
                 </item>
                 <item>
                     <name>Apache: Total requests</name>
                     <type>DEPENDENT</type>
                     <key>apache.requests</key>
+                    <delay>0</delay>
                     <history>7d</history>
                     <description>A total number of accesses</description>
                     <applications>
@@ -145,24 +179,22 @@
                     <preprocessing>
                         <step>
                             <type>JSONPATH</type>
-                            <params>$[&#34;Total Accesses&#34;]</params>
+                            <params>$["Total Accesses"]</params>
                         </step>
                     </preprocessing>
                     <master_item>
                         <key>apache.get_status</key>
                     </master_item>
-                    <triggers></triggers>
-                    <valuemap>
-                        <mappings></mappings>
-                    </valuemap>
                 </item>
                 <item>
                     <name>Apache: Requests per second</name>
                     <type>DEPENDENT</type>
                     <key>apache.requests.rate</key>
+                    <delay>0</delay>
                     <history>7d</history>
                     <value_type>FLOAT</value_type>
-                    <description>Calculated as change rate for &#39;Total requests&#39; stat.&#xD;&#xA;ReqPerSec is not used, as it counts average since last Apache server start.</description>
+                    <description>Calculated as change rate for 'Total requests' stat.&#13;
+ReqPerSec is not used, as it counts average since last Apache server start.</description>
                     <applications>
                         <application>
                             <name>Apache</name>
@@ -171,24 +203,22 @@
                     <preprocessing>
                         <step>
                             <type>JSONPATH</type>
-                            <params>$[&#34;Total Accesses&#34;]</params>
+                            <params>$["Total Accesses"]</params>
                         </step>
                         <step>
                             <type>CHANGE_PER_SECOND</type>
+                            <params/>
                         </step>
                     </preprocessing>
                     <master_item>
                         <key>apache.get_status</key>
                     </master_item>
-                    <triggers></triggers>
-                    <valuemap>
-                        <mappings></mappings>
-                    </valuemap>
                 </item>
                 <item>
                     <name>Apache: Uptime</name>
                     <type>DEPENDENT</type>
                     <key>apache.uptime</key>
+                    <delay>0</delay>
                     <history>7d</history>
                     <units>uptime</units>
                     <description>Service uptime in seconds</description>
@@ -213,18 +243,16 @@
                             <priority>INFO</priority>
                             <description>Uptime is less than 10 minutes</description>
                             <manual_close>YES</manual_close>
-                            <dependencies></dependencies>
                         </trigger>
                     </triggers>
-                    <valuemap>
-                        <mappings></mappings>
-                    </valuemap>
                 </item>
                 <item>
                     <name>Apache: Version</name>
                     <type>DEPENDENT</type>
                     <key>apache.version</key>
+                    <delay>0</delay>
                     <history>7d</history>
+                    <trends>0</trends>
                     <value_type>CHAR</value_type>
                     <description>Service version</description>
                     <applications>
@@ -248,22 +276,19 @@
                     <triggers>
                         <trigger>
                             <expression>{diff()}=1 and {strlen()}&gt;0</expression>
+                            <recovery_mode>NONE</recovery_mode>
                             <name>Apache: Version has changed (new version: {ITEM.VALUE})</name>
                             <priority>INFO</priority>
                             <description>Apache version has changed. Ack to close.</description>
                             <manual_close>YES</manual_close>
-                            <dependencies></dependencies>
-                            <recovery_mode>NONE</recovery_mode>
                         </trigger>
                     </triggers>
-                    <valuemap>
-                        <mappings></mappings>
-                    </valuemap>
                 </item>
                 <item>
                     <name>Apache: Total workers busy</name>
                     <type>DEPENDENT</type>
                     <key>apache.workers_total.busy</key>
+                    <delay>0</delay>
                     <history>7d</history>
                     <description>Total number of busy worker threads/processes</description>
                     <applications>
@@ -280,15 +305,12 @@
                     <master_item>
                         <key>apache.get_status</key>
                     </master_item>
-                    <triggers></triggers>
-                    <valuemap>
-                        <mappings></mappings>
-                    </valuemap>
                 </item>
                 <item>
                     <name>Apache: Total workers idle</name>
                     <type>DEPENDENT</type>
                     <key>apache.workers_total.idle</key>
+                    <delay>0</delay>
                     <history>7d</history>
                     <description>Total number of idle worker threads/processes</description>
                     <applications>
@@ -305,15 +327,12 @@
                     <master_item>
                         <key>apache.get_status</key>
                     </master_item>
-                    <triggers></triggers>
-                    <valuemap>
-                        <mappings></mappings>
-                    </valuemap>
                 </item>
                 <item>
                     <name>Apache: Workers idle cleanup</name>
                     <type>DEPENDENT</type>
                     <key>apache.workers.cleanup</key>
+                    <delay>0</delay>
                     <history>7d</history>
                     <description>Number of workers in cleanup state</description>
                     <applications>
@@ -330,15 +349,12 @@
                     <master_item>
                         <key>apache.get_status</key>
                     </master_item>
-                    <triggers></triggers>
-                    <valuemap>
-                        <mappings></mappings>
-                    </valuemap>
                 </item>
                 <item>
                     <name>Apache: Workers closing connection</name>
                     <type>DEPENDENT</type>
                     <key>apache.workers.closing</key>
+                    <delay>0</delay>
                     <history>7d</history>
                     <description>Number of workers in closing state</description>
                     <applications>
@@ -355,15 +371,12 @@
                     <master_item>
                         <key>apache.get_status</key>
                     </master_item>
-                    <triggers></triggers>
-                    <valuemap>
-                        <mappings></mappings>
-                    </valuemap>
                 </item>
                 <item>
                     <name>Apache: Workers DNS lookup</name>
                     <type>DEPENDENT</type>
                     <key>apache.workers.dnslookup</key>
+                    <delay>0</delay>
                     <history>7d</history>
                     <description>Number of workers in dnslookup state</description>
                     <applications>
@@ -380,15 +393,12 @@
                     <master_item>
                         <key>apache.get_status</key>
                     </master_item>
-                    <triggers></triggers>
-                    <valuemap>
-                        <mappings></mappings>
-                    </valuemap>
                 </item>
                 <item>
                     <name>Apache: Workers finishing</name>
                     <type>DEPENDENT</type>
                     <key>apache.workers.finishing</key>
+                    <delay>0</delay>
                     <history>7d</history>
                     <description>Number of workers in finishing state</description>
                     <applications>
@@ -405,15 +415,12 @@
                     <master_item>
                         <key>apache.get_status</key>
                     </master_item>
-                    <triggers></triggers>
-                    <valuemap>
-                        <mappings></mappings>
-                    </valuemap>
                 </item>
                 <item>
                     <name>Apache: Workers keepalive (read)</name>
                     <type>DEPENDENT</type>
                     <key>apache.workers.keepalive</key>
+                    <delay>0</delay>
                     <history>7d</history>
                     <description>Number of workers in keepalive state</description>
                     <applications>
@@ -430,15 +437,12 @@
                     <master_item>
                         <key>apache.get_status</key>
                     </master_item>
-                    <triggers></triggers>
-                    <valuemap>
-                        <mappings></mappings>
-                    </valuemap>
                 </item>
                 <item>
                     <name>Apache: Workers logging</name>
                     <type>DEPENDENT</type>
                     <key>apache.workers.logging</key>
+                    <delay>0</delay>
                     <history>7d</history>
                     <description>Number of workers in logging state</description>
                     <applications>
@@ -455,15 +459,12 @@
                     <master_item>
                         <key>apache.get_status</key>
                     </master_item>
-                    <triggers></triggers>
-                    <valuemap>
-                        <mappings></mappings>
-                    </valuemap>
                 </item>
                 <item>
                     <name>Apache: Workers reading request</name>
                     <type>DEPENDENT</type>
                     <key>apache.workers.reading</key>
+                    <delay>0</delay>
                     <history>7d</history>
                     <description>Number of workers in reading state</description>
                     <applications>
@@ -480,15 +481,12 @@
                     <master_item>
                         <key>apache.get_status</key>
                     </master_item>
-                    <triggers></triggers>
-                    <valuemap>
-                        <mappings></mappings>
-                    </valuemap>
                 </item>
                 <item>
                     <name>Apache: Workers sending reply</name>
                     <type>DEPENDENT</type>
                     <key>apache.workers.sending</key>
+                    <delay>0</delay>
                     <history>7d</history>
                     <description>Number of workers in sending state</description>
                     <applications>
@@ -505,15 +503,12 @@
                     <master_item>
                         <key>apache.get_status</key>
                     </master_item>
-                    <triggers></triggers>
-                    <valuemap>
-                        <mappings></mappings>
-                    </valuemap>
                 </item>
                 <item>
                     <name>Apache: Workers slot with no current process</name>
                     <type>DEPENDENT</type>
                     <key>apache.workers.slot</key>
+                    <delay>0</delay>
                     <history>7d</history>
                     <description>Number of slots with no current process</description>
                     <applications>
@@ -530,15 +525,12 @@
                     <master_item>
                         <key>apache.get_status</key>
                     </master_item>
-                    <triggers></triggers>
-                    <valuemap>
-                        <mappings></mappings>
-                    </valuemap>
                 </item>
                 <item>
                     <name>Apache: Workers starting up</name>
                     <type>DEPENDENT</type>
                     <key>apache.workers.starting</key>
+                    <delay>0</delay>
                     <history>7d</history>
                     <description>Number of workers in starting state</description>
                     <applications>
@@ -555,15 +547,12 @@
                     <master_item>
                         <key>apache.get_status</key>
                     </master_item>
-                    <triggers></triggers>
-                    <valuemap>
-                        <mappings></mappings>
-                    </valuemap>
                 </item>
                 <item>
                     <name>Apache: Workers waiting for connection</name>
                     <type>DEPENDENT</type>
                     <key>apache.workers.waiting</key>
+                    <delay>0</delay>
                     <history>7d</history>
                     <description>Number of workers in waiting state</description>
                     <applications>
@@ -580,15 +569,11 @@
                     <master_item>
                         <key>apache.get_status</key>
                     </master_item>
-                    <triggers></triggers>
-                    <valuemap>
-                        <mappings></mappings>
-                    </valuemap>
                 </item>
                 <item>
                     <name>Apache: Service response time</name>
                     <type>SIMPLE</type>
-                    <key>net.tcp.service.perf[http,&#34;{HOST.CONN}&#34;,&#34;{$APACHE.STATUS.PORT}&#34;]</key>
+                    <key>net.tcp.service.perf[http,"{HOST.CONN}","{$APACHE.STATUS.PORT}"]</key>
                     <history>7d</history>
                     <value_type>FLOAT</value_type>
                     <units>s</units>
@@ -597,8 +582,6 @@
                             <name>Apache</name>
                         </application>
                     </applications>
-                    <preprocessing></preprocessing>
-                    <master_item></master_item>
                     <triggers>
                         <trigger>
                             <expression>{min(5m)}&gt;{$APACHE.RESPONSE_TIME.MAX.WARN}</expression>
@@ -608,45 +591,39 @@
                             <dependencies>
                                 <dependency>
                                     <name>Apache: Service is down</name>
-                                    <expression>{Template App Apache by HTTP:net.tcp.service[http,&#34;{HOST.CONN}&#34;,&#34;{$APACHE.STATUS.PORT}&#34;].last()}=0</expression>
+                                    <expression>{Template App Apache by HTTP:net.tcp.service[http,"{HOST.CONN}","{$APACHE.STATUS.PORT}"].last()}=0</expression>
                                 </dependency>
                             </dependencies>
                         </trigger>
                     </triggers>
-                    <valuemap>
-                        <mappings></mappings>
-                    </valuemap>
                 </item>
                 <item>
                     <name>Apache: Service ping</name>
                     <type>SIMPLE</type>
-                    <key>net.tcp.service[http,&#34;{HOST.CONN}&#34;,&#34;{$APACHE.STATUS.PORT}&#34;]</key>
+                    <key>net.tcp.service[http,"{HOST.CONN}","{$APACHE.STATUS.PORT}"]</key>
                     <history>7d</history>
                     <applications>
                         <application>
                             <name>Apache</name>
                         </application>
                     </applications>
+                    <valuemap>
+                        <name>Service state</name>
+                    </valuemap>
                     <preprocessing>
                         <step>
                             <type>DISCARD_UNCHANGED_HEARTBEAT</type>
                             <params>10m</params>
                         </step>
                     </preprocessing>
-                    <master_item></master_item>
                     <triggers>
                         <trigger>
                             <expression>{last()}=0</expression>
                             <name>Apache: Service is down</name>
                             <priority>AVERAGE</priority>
                             <manual_close>YES</manual_close>
-                            <dependencies></dependencies>
                         </trigger>
                     </triggers>
-                    <valuemap>
-                        <name>Service state</name>
-                        <mappings></mappings>
-                    </valuemap>
                 </item>
             </items>
             <discovery_rules>
@@ -654,12 +631,15 @@
                     <name>Event MPM discovery</name>
                     <type>DEPENDENT</type>
                     <key>apache.mpm.event.discovery</key>
-                    <description>Additional metrics if event MPM is used&#xD;&#xA;https://httpd.apache.org/docs/current/mod/event.html</description>
+                    <delay>0</delay>
+                    <description>Additional metrics if event MPM is used&#13;
+https://httpd.apache.org/docs/current/mod/event.html</description>
                     <item_prototypes>
                         <item_prototype>
                             <name>Apache: Bytes per request</name>
                             <type>DEPENDENT</type>
                             <key>apache.bytes[per_request{#SINGLETON}]</key>
+                            <delay>0</delay>
                             <history>7d</history>
                             <value_type>FLOAT</value_type>
                             <units>B</units>
@@ -683,6 +663,7 @@
                             <name>Apache: Connections async closing</name>
                             <type>DEPENDENT</type>
                             <key>apache.connections[async_closing{#SINGLETON}]</key>
+                            <delay>0</delay>
                             <history>7d</history>
                             <description>Number of async connections in closing state (only applicable to event MPM)</description>
                             <applications>
@@ -704,6 +685,7 @@
                             <name>Apache: Connections async keep alive</name>
                             <type>DEPENDENT</type>
                             <key>apache.connections[async_keep_alive{#SINGLETON}]</key>
+                            <delay>0</delay>
                             <history>7d</history>
                             <description>Number of async connections in keep-alive state (only applicable to event MPM)</description>
                             <applications>
@@ -725,6 +707,7 @@
                             <name>Apache: Connections async writing</name>
                             <type>DEPENDENT</type>
                             <key>apache.connections[async_writing{#SINGLETON}]</key>
+                            <delay>0</delay>
                             <history>7d</history>
                             <description>Number of async connections in writing state (only applicable to event MPM)</description>
                             <applications>
@@ -746,6 +729,7 @@
                             <name>Apache: Connections total</name>
                             <type>DEPENDENT</type>
                             <key>apache.connections[total{#SINGLETON}]</key>
+                            <delay>0</delay>
                             <history>7d</history>
                             <description>Number of total connections</description>
                             <applications>
@@ -767,6 +751,7 @@
                             <name>Apache: Number of async processes</name>
                             <type>DEPENDENT</type>
                             <key>apache.process[num{#SINGLETON}]</key>
+                            <delay>0</delay>
                             <history>7d</history>
                             <description>Number of async processes</description>
                             <applications>
@@ -797,29 +782,29 @@
                                     </item>
                                 </graph_item>
                                 <graph_item>
+                                    <sortorder>1</sortorder>
                                     <color>2774A4</color>
                                     <item>
                                         <host>Template App Apache by HTTP</host>
                                         <key>apache.connections[async_keep_alive{#SINGLETON}]</key>
                                     </item>
-                                    <sortorder>1</sortorder>
                                 </graph_item>
                                 <graph_item>
+                                    <sortorder>2</sortorder>
                                     <color>F63100</color>
                                     <item>
                                         <host>Template App Apache by HTTP</host>
                                         <key>apache.connections[async_writing{#SINGLETON}]</key>
                                     </item>
-                                    <sortorder>2</sortorder>
                                 </graph_item>
                                 <graph_item>
+                                    <sortorder>3</sortorder>
+                                    <drawtype>BOLD_LINE</drawtype>
                                     <color>A54F10</color>
                                     <item>
                                         <host>Template App Apache by HTTP</host>
                                         <key>apache.connections[total{#SINGLETON}]</key>
                                     </item>
-                                    <sortorder>3</sortorder>
-                                    <drawtype>BOLD_LINE</drawtype>
                                 </graph_item>
                             </graph_items>
                         </graph_prototype>
@@ -827,16 +812,19 @@
                             <name>Apache: Current async processes{#SINGLETON}</name>
                             <graph_items>
                                 <graph_item>
+                                    <drawtype>GRADIENT_LINE</drawtype>
                                     <color>1A7C11</color>
                                     <item>
                                         <host>Template App Apache by HTTP</host>
                                         <key>apache.process[num{#SINGLETON}]</key>
                                     </item>
-                                    <drawtype>GRADIENT_LINE</drawtype>
                                 </graph_item>
                             </graph_items>
                         </graph_prototype>
                     </graph_prototypes>
+                    <master_item>
+                        <key>apache.get_status</key>
+                    </master_item>
                     <preprocessing>
                         <step>
                             <type>JSONPATH</type>
@@ -844,12 +832,9 @@
                         </step>
                         <step>
                             <type>JAVASCRIPT</type>
-                            <params>return JSON.stringify(value === &#39;event&#39; ? [{&#39;{#SINGLETON}&#39;: &#39;&#39;}] : []);</params>
+                            <params>return JSON.stringify(value === 'event' ? [{'{#SINGLETON}': ''}] : []);</params>
                         </step>
                     </preprocessing>
-                    <master_item>
-                        <key>apache.get_status</key>
-                    </master_item>
                 </discovery_rule>
             </discovery_rules>
             <macros>
@@ -881,18 +866,30 @@
                     <vsize>3</vsize>
                     <screen_items>
                         <screen_item>
+                            <resourcetype>0</resourcetype>
+                            <style>0</style>
                             <resource>
                                 <name>Apache: Requests per second</name>
                                 <host>Template App Apache by HTTP</host>
                             </resource>
                             <width>500</width>
                             <height>100</height>
+                            <x>0</x>
+                            <y>0</y>
                             <colspan>1</colspan>
                             <rowspan>1</rowspan>
                             <elements>25</elements>
+                            <valign>0</valign>
+                            <halign>0</halign>
+                            <dynamic>0</dynamic>
+                            <sort_triggers>0</sort_triggers>
+                            <url/>
+                            <application/>
                             <max_columns>3</max_columns>
                         </screen_item>
                         <screen_item>
+                            <resourcetype>0</resourcetype>
+                            <style>0</style>
                             <resource>
                                 <name>Apache: Workers total</name>
                                 <host>Template App Apache by HTTP</host>
@@ -900,27 +897,43 @@
                             <width>500</width>
                             <height>100</height>
                             <x>1</x>
+                            <y>0</y>
                             <colspan>1</colspan>
                             <rowspan>1</rowspan>
                             <elements>25</elements>
+                            <valign>0</valign>
+                            <halign>0</halign>
+                            <dynamic>0</dynamic>
+                            <sort_triggers>0</sort_triggers>
+                            <url/>
+                            <application/>
                             <max_columns>3</max_columns>
                         </screen_item>
                         <screen_item>
                             <resourcetype>20</resourcetype>
+                            <style>0</style>
                             <resource>
                                 <name>Apache: Current async connections{#SINGLETON}</name>
                                 <host>Template App Apache by HTTP</host>
                             </resource>
                             <width>500</width>
                             <height>100</height>
+                            <x>0</x>
                             <y>1</y>
                             <colspan>1</colspan>
                             <rowspan>1</rowspan>
                             <elements>25</elements>
+                            <valign>0</valign>
+                            <halign>0</halign>
+                            <dynamic>0</dynamic>
+                            <sort_triggers>0</sort_triggers>
+                            <url/>
+                            <application/>
                             <max_columns>3</max_columns>
                         </screen_item>
                         <screen_item>
                             <resourcetype>20</resourcetype>
+                            <style>0</style>
                             <resource>
                                 <name>Apache: Current async processes{#SINGLETON}</name>
                                 <host>Template App Apache by HTTP</host>
@@ -932,19 +945,34 @@
                             <colspan>1</colspan>
                             <rowspan>1</rowspan>
                             <elements>25</elements>
+                            <valign>0</valign>
+                            <halign>0</halign>
+                            <dynamic>0</dynamic>
+                            <sort_triggers>0</sort_triggers>
+                            <url/>
+                            <application/>
                             <max_columns>3</max_columns>
                         </screen_item>
                         <screen_item>
+                            <resourcetype>0</resourcetype>
+                            <style>0</style>
                             <resource>
                                 <name>Apache: Worker states</name>
                                 <host>Template App Apache by HTTP</host>
                             </resource>
                             <width>500</width>
                             <height>100</height>
+                            <x>0</x>
                             <y>2</y>
                             <colspan>1</colspan>
                             <rowspan>1</rowspan>
                             <elements>25</elements>
+                            <valign>0</valign>
+                            <halign>0</halign>
+                            <dynamic>0</dynamic>
+                            <sort_triggers>0</sort_triggers>
+                            <url/>
+                            <application/>
                             <max_columns>3</max_columns>
                         </screen_item>
                     </screen_items>
@@ -957,12 +985,12 @@
             <name>Apache: Requests per second</name>
             <graph_items>
                 <graph_item>
+                    <drawtype>GRADIENT_LINE</drawtype>
                     <color>1A7C11</color>
                     <item>
                         <host>Template App Apache by HTTP</host>
                         <key>apache.requests.rate</key>
                     </item>
-                    <drawtype>GRADIENT_LINE</drawtype>
                 </graph_item>
             </graph_items>
         </graph>
@@ -977,89 +1005,90 @@
                     </item>
                 </graph_item>
                 <graph_item>
+                    <sortorder>1</sortorder>
                     <color>2774A4</color>
                     <item>
                         <host>Template App Apache by HTTP</host>
                         <key>apache.workers.cleanup</key>
                     </item>
-                    <sortorder>1</sortorder>
                 </graph_item>
                 <graph_item>
+                    <sortorder>2</sortorder>
                     <color>F63100</color>
                     <item>
                         <host>Template App Apache by HTTP</host>
                         <key>apache.workers.logging</key>
                     </item>
-                    <sortorder>2</sortorder>
                 </graph_item>
                 <graph_item>
+                    <sortorder>3</sortorder>
                     <color>A54F10</color>
                     <item>
                         <host>Template App Apache by HTTP</host>
                         <key>apache.workers.reading</key>
                     </item>
-                    <sortorder>3</sortorder>
                 </graph_item>
                 <graph_item>
+                    <sortorder>4</sortorder>
                     <color>FC6EA3</color>
                     <item>
                         <host>Template App Apache by HTTP</host>
                         <key>apache.workers.sending</key>
                     </item>
-                    <sortorder>4</sortorder>
                 </graph_item>
                 <graph_item>
+                    <sortorder>5</sortorder>
                     <color>6C59DC</color>
                     <item>
                         <host>Template App Apache by HTTP</host>
                         <key>apache.workers.starting</key>
                     </item>
-                    <sortorder>5</sortorder>
                 </graph_item>
                 <graph_item>
+                    <sortorder>6</sortorder>
                     <color>AC8C14</color>
                     <item>
                         <host>Template App Apache by HTTP</host>
                         <key>apache.workers.closing</key>
                     </item>
-                    <sortorder>6</sortorder>
                 </graph_item>
                 <graph_item>
+                    <sortorder>7</sortorder>
                     <color>611F27</color>
                     <item>
                         <host>Template App Apache by HTTP</host>
                         <key>apache.workers.finishing</key>
                     </item>
-                    <sortorder>7</sortorder>
                 </graph_item>
                 <graph_item>
+                    <sortorder>8</sortorder>
                     <color>F230E0</color>
                     <item>
                         <host>Template App Apache by HTTP</host>
                         <key>apache.workers.keepalive</key>
                     </item>
-                    <sortorder>8</sortorder>
                 </graph_item>
                 <graph_item>
+                    <sortorder>9</sortorder>
                     <color>FFAD40</color>
                     <item>
                         <host>Template App Apache by HTTP</host>
                         <key>apache.workers.slot</key>
                     </item>
-                    <sortorder>9</sortorder>
                 </graph_item>
                 <graph_item>
+                    <sortorder>10</sortorder>
                     <color>40CDFF</color>
                     <item>
                         <host>Template App Apache by HTTP</host>
                         <key>apache.workers.waiting</key>
                     </item>
-                    <sortorder>10</sortorder>
                 </graph_item>
             </graph_items>
         </graph>
         <graph>
             <name>Apache: Workers total</name>
+            <type>STACKED</type>
             <graph_items>
                 <graph_item>
                     <color>1A7C11</color>
@@ -1069,12 +1098,12 @@
                     </item>
                 </graph_item>
                 <graph_item>
+                    <sortorder>1</sortorder>
                     <color>2774A4</color>
                     <item>
                         <host>Template App Apache by HTTP</host>
                         <key>apache.workers_total.idle</key>
                     </item>
-                    <sortorder>1</sortorder>
                 </graph_item>
             </graph_items>
         </graph>
