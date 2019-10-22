@@ -248,5 +248,9 @@ func main() {
 		fmt.Printf("Can't write output file, error: %s\n", err.Error())
 		os.Exit(1)
 	}
-	f.Sync()
+	err = f.Sync()
+	if err != nil {
+		fmt.Printf("Can't sync output file, error: %s\n", err.Error())
+		os.Exit(1)
+	}
 }
