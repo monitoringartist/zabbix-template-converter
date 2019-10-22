@@ -155,9 +155,9 @@ func main() {
 				"<trigger_prototypes></trigger_prototypes>", "",
 				"<application_prototypes></application_prototypes>", "",
 			)
-			re := regexp.MustCompile("(?m)^\\s*$[\r\n]*")
-			re2 := regexp.MustCompile("(?m)^[\\s]*<valuemap>[\\s]*</valuemap>[\\s]*$")
-			re3 := regexp.MustCompile("(?m)^[\\s]*<filter>[\\s]*</filter>[\\s]*$")
+			re := regexp.MustCompile(`(?m)^\s*$[\r\n]*`)
+			re2 := regexp.MustCompile(`(?m)^[\s]*<valuemap>[\s]*</valuemap>[\s]*$`)
+			re3 := regexp.MustCompile(`(?m)^[\s]*<filter>[\s]*</filter>[\s]*$`)
 			outData = []byte(xml.Header + re.ReplaceAllString(re2.ReplaceAllString(re3.ReplaceAllString(r.Replace(string(outData)), ""), ""), ""))
 		}
 		if templVersion.Version == "4.0" {
@@ -216,9 +216,9 @@ func main() {
 				"<ipmi_sensor></ipmi_sensor>", "<ipmi_sensor/>",
 				"<jmx_endpoint></jmx_endpoint>", "<jmx_endpoint/>",
 			)
-			re := regexp.MustCompile("(?m)^\\s*$[\r\n]*")
-			re2 := regexp.MustCompile("(?m)^<valuemap>[\\s]*</valuemap>[\\s]*$")
-			re3 := regexp.MustCompile("(?m)^[\\s]*<filter>[\\s]*</filter>[\\s]*$")
+			re := regexp.MustCompile(`(?m)^\s*$[\r\n]*`)
+			re2 := regexp.MustCompile(`(?m)^<valuemap>[\s]*</valuemap>[\s]*$`)
+			re3 := regexp.MustCompile(`(?m)^[\s]*<filter>[\s]*</filter>[\s]*$`)
 			outData = []byte(xml.Header + re.ReplaceAllString(re2.ReplaceAllString(re3.ReplaceAllString(r.Replace(string(outData)), ""), "<valuemap/>"), ""))
 		}
 	case "json":
